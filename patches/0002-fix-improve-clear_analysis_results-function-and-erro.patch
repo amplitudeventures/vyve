@@ -1,0 +1,1912 @@
+From 510b0ce0dfa2c26cb7291a78666e8938559013e5 Mon Sep 17 00:00:00 2001
+From: jakobwredstrom <jakob@amplitude.ventures>
+Date: Thu, 6 Feb 2025 13:33:46 +0100
+Subject: [PATCH 2/2] fix: improve clear_analysis_results function and error
+ handling - Add WHERE clause and delete policy
+
+---
+ __pycache__/app.cpython-311.pyc               | Bin 2699 -> 56938 bytes
+ package-lock.json                             |  65 ++-
+ package.json                                  |   4 +-
+ scripts/apply_clear_analysis_migration.py     |  32 +-
+ src/api/vyve/adjust-analysis.ts               |   4 +-
+ .../analysis/phases/PhaseContent.tsx          |  10 +
+ src/hooks/useVyveAnalysis.ts                  |  28 +-
+ src/pages/VyveAnalysis.tsx                    |  23 +-
+ src/paths.ts                                  |   8 +
+ src/server.ts                                 |   5 +-
+ src/services/openaiService.ts                 |  35 +-
+ src/services/vyveService.ts                   | 540 ++++++++++++++----
+ src/types/vyve.ts                             |  19 +-
+ src/utils/validationUtils.ts                  |  32 ++
+ ...40318000000_analysis_results_procedure.sql |  10 +-
+ tsconfig.json                                 |  15 +-
+ 16 files changed, 673 insertions(+), 157 deletions(-)
+ create mode 100644 src/paths.ts
+
+diff --git a/__pycache__/app.cpython-311.pyc b/__pycache__/app.cpython-311.pyc
+index a17e59d86cfbccc6a8a3732424eb86be6ed06742..0b51c29757a59acd84481317015323e5487644ca 100644
+GIT binary patch
+literal 56938
+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
+
+literal 2699
+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
+
+diff --git a/package-lock.json b/package-lock.json
+index 4de3a6a..6621745 100644
+--- a/package-lock.json
++++ b/package-lock.json
+@@ -49,6 +49,7 @@
+         "idb": "^8.0.2",
+         "input-otp": "^1.4.2",
+         "lucide-react": "^0.474.0",
++        "module-alias": "^2.2.3",
+         "morgan": "^1.10.0",
+         "next-themes": "^0.4.4",
+         "nodemon": "^3.1.9",
+@@ -65,6 +66,7 @@
+         "tailwind-merge": "^2.6.0",
+         "tiktoken": "^1.0.18",
+         "ts-node": "^10.9.2",
++        "tsconfig-paths": "^4.2.0",
+         "tsx": "^4.19.2",
+         "vaul": "^1.1.2",
+         "zod": "^3.24.1"
+@@ -5362,7 +5364,6 @@
+       "version": "2.2.3",
+       "resolved": "https://registry.npmjs.org/json5/-/json5-2.2.3.tgz",
+       "integrity": "sha512-XmOWe7eyHYH14cLdVPoyg+GOH3rYX++KpzrylJwSW98t3Nk+U8XOl8FWKOgwtzdb8lXGf6zYwDUzeHMWfxasyg==",
+-      "dev": true,
+       "bin": {
+         "json5": "lib/cli.js"
+       },
+@@ -5549,6 +5550,14 @@
+         "url": "https://github.com/sponsors/isaacs"
+       }
+     },
++    "node_modules/minimist": {
++      "version": "1.2.8",
++      "resolved": "https://registry.npmjs.org/minimist/-/minimist-1.2.8.tgz",
++      "integrity": "sha512-2yyAR8qBkN3YuheJanUpWC5U3bb5osDywNB8RzDVlDwDHbocAJveqqj1u8+SVD7jkWT4yvsHCpWqqWqAxb0zCA==",
++      "funding": {
++        "url": "https://github.com/sponsors/ljharb"
++      }
++    },
+     "node_modules/minipass": {
+       "version": "7.1.2",
+       "resolved": "https://registry.npmjs.org/minipass/-/minipass-7.1.2.tgz",
+@@ -5558,6 +5567,11 @@
+         "node": ">=16 || 14 >=14.17"
+       }
+     },
++    "node_modules/module-alias": {
++      "version": "2.2.3",
++      "resolved": "https://registry.npmjs.org/module-alias/-/module-alias-2.2.3.tgz",
++      "integrity": "sha512-23g5BFj4zdQL/b6tor7Ji+QY4pEfNH784BMslY9Qb0UnJWRAt+lQGLYmRaM0KDBwIG23ffEBELhZDP2rhi9f/Q=="
++    },
+     "node_modules/morgan": {
+       "version": "1.10.0",
+       "resolved": "https://registry.npmjs.org/morgan/-/morgan-1.10.0.tgz",
+@@ -6834,6 +6848,14 @@
+         "node": ">=8"
+       }
+     },
++    "node_modules/strip-bom": {
++      "version": "3.0.0",
++      "resolved": "https://registry.npmjs.org/strip-bom/-/strip-bom-3.0.0.tgz",
++      "integrity": "sha512-vavAMRXOgBVNF6nyEEmL3DBK19iRpDcoIwW+swQ+CbGiu7lju6t+JklA1MHweoWtadgt4ISVUsXLyDq34ddcwA==",
++      "engines": {
++        "node": ">=4"
++      }
++    },
+     "node_modules/strip-json-comments": {
+       "version": "3.1.1",
+       "resolved": "https://registry.npmjs.org/strip-json-comments/-/strip-json-comments-3.1.1.tgz",
+@@ -7115,6 +7137,19 @@
+       "resolved": "https://registry.npmjs.org/arg/-/arg-4.1.3.tgz",
+       "integrity": "sha512-58S9QDqG0Xx27YwPSt9fJxivjYl432YCwfDMfZ+71RAqUrZef7LrKQZ3LHLOwCS4FLNBplP533Zx895SeOCHvA=="
+     },
++    "node_modules/tsconfig-paths": {
++      "version": "4.2.0",
++      "resolved": "https://registry.npmjs.org/tsconfig-paths/-/tsconfig-paths-4.2.0.tgz",
++      "integrity": "sha512-NoZ4roiN7LnbKn9QqE1amc9DJfzvZXxF4xDavcOWt1BPkdx+m+0gJuPM+S0vCe7zTJMYUP0R8pO2XMr+Y8oLIg==",
++      "dependencies": {
++        "json5": "^2.2.2",
++        "minimist": "^1.2.6",
++        "strip-bom": "^3.0.0"
++      },
++      "engines": {
++        "node": ">=6"
++      }
++    },
+     "node_modules/tslib": {
+       "version": "2.8.1",
+       "resolved": "https://registry.npmjs.org/tslib/-/tslib-2.8.1.tgz",
+@@ -11415,8 +11450,7 @@
+     "json5": {
+       "version": "2.2.3",
+       "resolved": "https://registry.npmjs.org/json5/-/json5-2.2.3.tgz",
+-      "integrity": "sha512-XmOWe7eyHYH14cLdVPoyg+GOH3rYX++KpzrylJwSW98t3Nk+U8XOl8FWKOgwtzdb8lXGf6zYwDUzeHMWfxasyg==",
+-      "dev": true
++      "integrity": "sha512-XmOWe7eyHYH14cLdVPoyg+GOH3rYX++KpzrylJwSW98t3Nk+U8XOl8FWKOgwtzdb8lXGf6zYwDUzeHMWfxasyg=="
+     },
+     "keyv": {
+       "version": "4.5.4",
+@@ -11556,12 +11590,22 @@
+         "brace-expansion": "^2.0.1"
+       }
+     },
++    "minimist": {
++      "version": "1.2.8",
++      "resolved": "https://registry.npmjs.org/minimist/-/minimist-1.2.8.tgz",
++      "integrity": "sha512-2yyAR8qBkN3YuheJanUpWC5U3bb5osDywNB8RzDVlDwDHbocAJveqqj1u8+SVD7jkWT4yvsHCpWqqWqAxb0zCA=="
++    },
+     "minipass": {
+       "version": "7.1.2",
+       "resolved": "https://registry.npmjs.org/minipass/-/minipass-7.1.2.tgz",
+       "integrity": "sha512-qOOzS1cBTWYF4BH8fVePDBOO9iptMnGUEZwNc/cMWnTV2nVLZ7VoNWEPHkYczZA0pdoA7dl6e7FL659nX9S2aw==",
+       "dev": true
+     },
++    "module-alias": {
++      "version": "2.2.3",
++      "resolved": "https://registry.npmjs.org/module-alias/-/module-alias-2.2.3.tgz",
++      "integrity": "sha512-23g5BFj4zdQL/b6tor7Ji+QY4pEfNH784BMslY9Qb0UnJWRAt+lQGLYmRaM0KDBwIG23ffEBELhZDP2rhi9f/Q=="
++    },
+     "morgan": {
+       "version": "1.10.0",
+       "resolved": "https://registry.npmjs.org/morgan/-/morgan-1.10.0.tgz",
+@@ -12393,6 +12437,11 @@
+         "ansi-regex": "^5.0.1"
+       }
+     },
++    "strip-bom": {
++      "version": "3.0.0",
++      "resolved": "https://registry.npmjs.org/strip-bom/-/strip-bom-3.0.0.tgz",
++      "integrity": "sha512-vavAMRXOgBVNF6nyEEmL3DBK19iRpDcoIwW+swQ+CbGiu7lju6t+JklA1MHweoWtadgt4ISVUsXLyDq34ddcwA=="
++    },
+     "strip-json-comments": {
+       "version": "3.1.1",
+       "resolved": "https://registry.npmjs.org/strip-json-comments/-/strip-json-comments-3.1.1.tgz",
+@@ -12592,6 +12641,16 @@
+         }
+       }
+     },
++    "tsconfig-paths": {
++      "version": "4.2.0",
++      "resolved": "https://registry.npmjs.org/tsconfig-paths/-/tsconfig-paths-4.2.0.tgz",
++      "integrity": "sha512-NoZ4roiN7LnbKn9QqE1amc9DJfzvZXxF4xDavcOWt1BPkdx+m+0gJuPM+S0vCe7zTJMYUP0R8pO2XMr+Y8oLIg==",
++      "requires": {
++        "json5": "^2.2.2",
++        "minimist": "^1.2.6",
++        "strip-bom": "^3.0.0"
++      }
++    },
+     "tslib": {
+       "version": "2.8.1",
+       "resolved": "https://registry.npmjs.org/tslib/-/tslib-2.8.1.tgz",
+diff --git a/package.json b/package.json
+index 32fe831..07f7d16 100644
+--- a/package.json
++++ b/package.json
+@@ -6,7 +6,7 @@
+   "scripts": {
+     "dev": "concurrently \"npm run dev:frontend\" \"npm run dev:server\"",
+     "dev:frontend": "vite",
+-    "dev:server": "NODE_OPTIONS=\"--loader ts-node/esm\" nodemon src/server.ts",
++    "dev:server": "NODE_OPTIONS=\"--loader ts-node/esm --experimental-specifier-resolution=node\" nodemon -r tsconfig-paths/register src/server.ts",
+     "build": "tsc && vite build",
+     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
+     "preview": "vite preview",
+@@ -54,6 +54,7 @@
+     "idb": "^8.0.2",
+     "input-otp": "^1.4.2",
+     "lucide-react": "^0.474.0",
++    "module-alias": "^2.2.3",
+     "morgan": "^1.10.0",
+     "next-themes": "^0.4.4",
+     "nodemon": "^3.1.9",
+@@ -70,6 +71,7 @@
+     "tailwind-merge": "^2.6.0",
+     "tiktoken": "^1.0.18",
+     "ts-node": "^10.9.2",
++    "tsconfig-paths": "^4.2.0",
+     "tsx": "^4.19.2",
+     "vaul": "^1.1.2",
+     "zod": "^3.24.1"
+diff --git a/scripts/apply_clear_analysis_migration.py b/scripts/apply_clear_analysis_migration.py
+index a5c3c26..85cc91e 100644
+--- a/scripts/apply_clear_analysis_migration.py
++++ b/scripts/apply_clear_analysis_migration.py
+@@ -18,13 +18,37 @@ print(f"Using service role key: ***{key[-6:]}")
+ 
+ supabase = create_client(url, key)
+ 
+-# Read the migration SQL
+-with open('supabase/migrations/20240402_add_clear_analysis_results.sql', 'r') as f:
+-    migration_sql = f.read()
++# Migration SQL
++migration_sql = """
++-- Drop existing function if it exists
++DROP FUNCTION IF EXISTS clear_analysis_results();
++
++-- Create the updated function with WHERE clause
++CREATE OR REPLACE FUNCTION clear_analysis_results()
++RETURNS void
++SECURITY DEFINER
++AS $$
++BEGIN
++    DELETE FROM analysis_results
++    WHERE phase_number >= 0;
++END;
++$$ LANGUAGE plpgsql;
++
++-- Grant execute permission to all users
++GRANT EXECUTE ON FUNCTION clear_analysis_results TO PUBLIC;
++
++-- Ensure delete policy exists
++DROP POLICY IF EXISTS "Enable delete access for all users" ON analysis_results;
++CREATE POLICY "Enable delete access for all users"
++    ON analysis_results
++    FOR DELETE
++    TO PUBLIC
++    USING (true);
++"""
+ 
+ try:
+     print("\nApplying migration...")
+-    # Execute the migration SQL directly
++    # Execute the migration SQL
+     result = supabase.rpc('execute_sql', {'query': migration_sql}).execute()
+     print("Migration applied successfully!")
+     
+diff --git a/src/api/vyve/adjust-analysis.ts b/src/api/vyve/adjust-analysis.ts
+index 4189e40..da55406 100644
+--- a/src/api/vyve/adjust-analysis.ts
++++ b/src/api/vyve/adjust-analysis.ts
+@@ -1,6 +1,6 @@
+ import { RequestHandler } from 'express';
+-import { OpenAIService } from '@/services/openaiService';
+-import { formatLogObject } from '@/utils/logUtils';
++import { OpenAIService } from '../../services/openaiService.js';
++import { formatLogObject } from '../../utils/logUtils.js';
+ 
+ const openai = new OpenAIService();
+ 
+diff --git a/src/components/analysis/phases/PhaseContent.tsx b/src/components/analysis/phases/PhaseContent.tsx
+index 8540fd4..2abfe86 100644
+--- a/src/components/analysis/phases/PhaseContent.tsx
++++ b/src/components/analysis/phases/PhaseContent.tsx
+@@ -422,6 +422,16 @@ export function PhaseContent({ phaseData, onStart, onUpdate }: PhaseContentProps
+ 
+   // Update renderStatus to show more details
+   const renderStatus = () => {
++    if (status === 'completed' && result?.content) {
++      return (
++        <div className="mt-6 space-y-4">
++          <div className="prose max-w-none dark:prose-invert">
++            <pre className="whitespace-pre-wrap">{result.content}</pre>
++          </div>
++        </div>
++      );
++    }
++
+     if (status === 'in_progress') {
+       const steps = result?.metadata?.conversation_log || DEFAULT_ANALYSIS_STEPS;
+       
+diff --git a/src/hooks/useVyveAnalysis.ts b/src/hooks/useVyveAnalysis.ts
+index 9c85dbe..61d7572 100644
+--- a/src/hooks/useVyveAnalysis.ts
++++ b/src/hooks/useVyveAnalysis.ts
+@@ -126,18 +126,42 @@ export function useVyveAnalysis() {
+ 
+       const result = await VyveService.startPhaseAnalysis(phase, model);
+       
+-      // Update phase with completed status
++      // Update phase with completed status and content
+       setPhases(prevPhases => 
+         prevPhases.map(p => 
+           p.phase === phase ? {
+             ...p,
+             status: 'completed' as const,
+             error: null,
+-            result: result.result
++            result: {
++              phase_number: phase,
++              content: result.content,
++              metadata: {
++                ...result.metadata,
++                status: 'completed',
++                conversation_log: result.metadata.conversation_log.map(log => ({
++                  ...log,
++                  status: 'completed'
++                }))
++              }
++            }
+           } : p
+         )
+       );
+ 
++      // Save completed phase to local storage
++      await localDb.savePhaseResult({
++        phase,
++        name: PHASE_NAMES[phase],
++        description: PHASE_DESCRIPTIONS[phase],
++        status: 'completed',
++        result: {
++          phase_number: phase,
++          content: result.content,
++          metadata: result.metadata
++        }
++      });
++
+       return result;
+     } catch (err) {
+       console.error('Error starting phase analysis:', err);
+diff --git a/src/pages/VyveAnalysis.tsx b/src/pages/VyveAnalysis.tsx
+index 442e64a..9937d7e 100644
+--- a/src/pages/VyveAnalysis.tsx
++++ b/src/pages/VyveAnalysis.tsx
+@@ -86,12 +86,22 @@ const VyveAnalysis = () => {
+   // Handle restart
+   const handleRestart = async () => {
+     try {
+-      // First clear Supabase analysis_results table using the dedicated RPC function
+-      const { error: deleteError } = await supabase.rpc('clear_analysis_results');
++      // First try to use the RPC function
++      const { error: rpcError } = await supabase.rpc('clear_analysis_results');
+ 
+-      if (deleteError) {
+-        console.error('Error clearing analysis results:', deleteError);
+-        throw deleteError;
++      if (rpcError) {
++        console.error('Error using RPC to clear analysis results:', rpcError);
++        
++        // Fallback: Delete all records with a WHERE clause that matches all records
++        const { error: deleteError } = await supabase
++          .from('analysis_results')
++          .delete()
++          .gte('phase_number', 0); // This ensures we delete all phases while satisfying the WHERE clause requirement
++
++        if (deleteError) {
++          console.error('Error clearing analysis results:', deleteError);
++          throw deleteError;
++        }
+       }
+ 
+       // Then clear local data
+@@ -102,12 +112,11 @@ const VyveAnalysis = () => {
+       
+       toast({
+         title: "Analysis Reset",
+-        description: "All phase results have been cleared from both local storage and database. Page will refresh...",
++        description: "All phase results have been cleared. Page will refresh...",
+       });
+ 
+       // Short delay to show the toast before reload
+       setTimeout(() => {
+-        // Reload the page to clear all state and console history
+         window.location.reload();
+       }, 1500);
+     } catch (err) {
+diff --git a/src/paths.ts b/src/paths.ts
+new file mode 100644
+index 0000000..707a375
+--- /dev/null
++++ b/src/paths.ts
+@@ -0,0 +1,8 @@
++import { fileURLToPath } from 'url';
++import { dirname, join } from 'path';
++
++const __filename = fileURLToPath(import.meta.url);
++const __dirname = dirname(__filename);
++
++export const resolveRoot = (path: string) => join(__dirname, '..', path);
++export const resolveSrc = (path: string) => join(__dirname, path); 
+\ No newline at end of file
+diff --git a/src/server.ts b/src/server.ts
+index 9e7e29b..c45c8f9 100644
+--- a/src/server.ts
++++ b/src/server.ts
+@@ -2,10 +2,11 @@ import express from 'express';
+ import cors from 'cors';
+ import morgan from 'morgan';
+ import dotenv from 'dotenv';
++import { resolveRoot } from './paths.js';
+ import router from './api/routes.js';
+ 
+-// Load environment variables
+-dotenv.config();
++// Load environment variables from the root .env file
++dotenv.config({ path: resolveRoot('.env') });
+ 
+ // Validate required environment variables
+ const requiredEnvVars = ['OPENAI_API_KEY'];
+diff --git a/src/services/openaiService.ts b/src/services/openaiService.ts
+index 670aa45..a720d4f 100644
+--- a/src/services/openaiService.ts
++++ b/src/services/openaiService.ts
+@@ -2,7 +2,7 @@ import OpenAI from 'openai';
+ import { errorLogger } from '../utils/errorLogger.js';
+ import { PineconeService } from './pineconeService.js';
+ import { formatLogObject } from '../utils/logUtils.js';
+-import { validateAnalysisOutput, AnalysisValidationResult } from '../utils/validationUtils.js';
++import { validateAnalysisOutput, AnalysisValidationResult, validateMessages } from '../utils/validationUtils.js';
+ import type { ChatCompletionMessageParam } from 'openai/resources/chat/completions';
+ 
+ interface AnalyzeParams {
+@@ -15,6 +15,8 @@ interface AnalyzeParams {
+     autoRetry?: boolean;
+     maxRetries?: number;
+     adjustParams?: boolean;
++    minCoverage?: number;
++    minSimilarity?: number;
+   };
+ }
+ 
+@@ -82,8 +84,12 @@ interface PhaseAnalysisParams extends AnalyzeParams {
+   previousPhaseAnswers?: PhaseContext[];
+ }
+ 
+-const DEFAULT_VALIDATION_CONFIG: ValidationRetryConfig = {
++const DEFAULT_VALIDATION = {
++  autoRetry: true,
+   maxRetries: 2,
++  adjustParams: true,
++  minCoverage: 10,
++  minSimilarity: 10,
+   temperatureStep: 0.1,
+   maxTokensIncrease: 500,
+   minTemperature: 0.1,
+@@ -193,6 +199,17 @@ export class OpenAIService {
+     try {
+       const modelConfig = this.getModelConfig(params.model);
+ 
++      // Validate messages using the new utility
++      const validation = validateMessages(params.messages);
++      if (!validation.isValid) {
++        console.error('[OpenAIService] Invalid messages:', {
++          error: validation.error,
++          messages: params.messages,
++          timestamp: new Date().toISOString()
++        });
++        throw new Error(validation.error || 'Invalid message content');
++      }
++
+       // Validate messages before proceeding
+       if (!params.messages || !Array.isArray(params.messages) || params.messages.length === 0) {
+         console.error('[OpenAIService] Invalid messages array:', {
+@@ -375,7 +392,7 @@ export class OpenAIService {
+ 
+         // Enhanced retry condition check
+         let shouldRetry = params.validation?.autoRetry !== false && 
+-          retryCount < (params.validation?.maxRetries ?? DEFAULT_VALIDATION_CONFIG.maxRetries) &&
++          retryCount < (params.validation?.maxRetries ?? DEFAULT_VALIDATION.maxRetries) &&
+           params.validation?.adjustParams !== false;
+ 
+         if (shouldRetry) {
+@@ -413,13 +430,13 @@ export class OpenAIService {
+ 
+         // Log final status if not retrying
+         console.warn('[OpenAIService] Not retrying analysis:', formatLogObject({
+-          reason: retryCount >= (params.validation?.maxRetries ?? DEFAULT_VALIDATION_CONFIG.maxRetries) 
++          reason: retryCount >= (params.validation?.maxRetries ?? DEFAULT_VALIDATION.maxRetries) 
+             ? 'Max retries reached' 
+             : params.validation?.autoRetry === false
+               ? 'Auto-retry disabled'
+               : 'Parameter adjustments insufficient',
+           retryCount,
+-          maxRetries: params.validation?.maxRetries ?? DEFAULT_VALIDATION_CONFIG.maxRetries,
++          maxRetries: params.validation?.maxRetries ?? DEFAULT_VALIDATION.maxRetries,
+           retryHistory,
+           timestamp: new Date().toISOString()
+         }));
+@@ -500,20 +517,20 @@ export class OpenAIService {
+       const currentTemp = params.temperature ?? config.defaultTemperature ?? 0.7;
+       
+       // Adjust temperature based on validation metrics
+-      let temperatureAdjustment = DEFAULT_VALIDATION_CONFIG.temperatureStep;
++      let temperatureAdjustment = DEFAULT_VALIDATION.temperatureStep;
+       if (validationResult.metrics.contextCoverage < 0.3) {
+         temperatureAdjustment *= 2;
+       }
+ 
+       // Calculate new temperature
+       adjustedParams.temperature = Math.max(
+-        DEFAULT_VALIDATION_CONFIG.minTemperature,
++        DEFAULT_VALIDATION.minTemperature,
+         currentTemp - (temperatureAdjustment * (currentRetryCount + 1))
+       );
+     }
+ 
+     // Calculate token increase based on content length
+-    let tokenIncrease = DEFAULT_VALIDATION_CONFIG.maxTokensIncrease;
++    let tokenIncrease = DEFAULT_VALIDATION.maxTokensIncrease;
+     if (validationResult.metrics.contentLength < 100) {
+       tokenIncrease *= 1.5;
+     }
+@@ -749,7 +766,7 @@ export class OpenAIService {
+         messages,
+         validation: {
+           autoRetry: validation?.autoRetry ?? true,
+-          maxRetries: validation?.maxRetries ?? DEFAULT_VALIDATION_CONFIG.maxRetries,
++          maxRetries: validation?.maxRetries ?? DEFAULT_VALIDATION.maxRetries,
+           adjustParams: validation?.adjustParams ?? true
+         }
+       };
+diff --git a/src/services/vyveService.ts b/src/services/vyveService.ts
+index c3beedb..7e6cf3a 100644
+--- a/src/services/vyveService.ts
++++ b/src/services/vyveService.ts
+@@ -1,8 +1,9 @@
+-import { supabase } from "@/integrations/supabase/client";
+-import { PhasePrompt, MdDocument, AnalysisResult } from "@/types/vyve";
+-import { PineconeService } from "./pineconeService";
+-import { OpenAIService } from "./openaiService";
+-import { formatLogObject } from "@/utils/logUtils";
++import { supabase } from "@/integrations/supabase/client.js";
++import { PhasePrompt, MdDocument, AnalysisResult } from "@/types/vyve.js";
++import { PineconeService } from "./pineconeService.js";
++import { OpenAIService } from "./openaiService.js";
++import { formatLogObject } from "@/utils/logUtils.js";
++import { createClient, SupabaseClient } from "@supabase/supabase-js";
+ 
+ interface ConversationLogStep {
+   step: string;
+@@ -25,6 +26,18 @@ interface AnalysisMetadata {
+   error?: string;
+ }
+ 
++let supabaseInstance: SupabaseClient | null = null;
++
++const getSupabaseClient = () => {
++  if (!supabaseInstance) {
++    supabaseInstance = createClient(
++      import.meta.env.VITE_SUPABASE_URL,
++      import.meta.env.VITE_SUPABASE_ANON_KEY
++    );
++  }
++  return supabaseInstance;
++};
++
+ export class VyveService {
+   /**
+    * Fetches the prompt for a specific phase
+@@ -37,7 +50,7 @@ export class VyveService {
+       });
+       
+       // First, let's check if we can connect to the database
+-      const { data: healthCheck, error: healthError } = await supabase
++      const { data: healthCheck, error: healthError } = await getSupabaseClient()
+         .from('phase_prompts')
+         .select('count')
+         .limit(1);
+@@ -53,7 +66,7 @@ export class VyveService {
+ 
+       console.log('[VyveService] Database connection successful, fetching prompt...');
+       
+-      const { data, error } = await supabase
++      const { data, error } = await getSupabaseClient()
+         .from('phase_prompts')
+         .select('*')
+         .eq('phase_number', phase)
+@@ -109,7 +122,7 @@ export class VyveService {
+         timestamp: new Date().toISOString()
+       });
+       
+-      const { data, error } = await supabase
++      const { data, error } = await getSupabaseClient()
+         .from('md_documents')
+         .select('*')
+         .in('id', documentIds);
+@@ -231,29 +244,135 @@ export class VyveService {
+    */
+   static async canStartPhase(phase: number): Promise<boolean> {
+     try {
++      console.log('[VyveService] Checking if phase can start:', {
++        phase,
++        timestamp: new Date().toISOString()
++      });
++      
+       const prompt = await this.getPhasePrompt(phase);
+       
+-      if (!prompt) return false;
++      if (!prompt) {
++        console.error('[VyveService] No prompt found for phase:', phase);
++        return false;
++      }
+       
+-      // Check all previous phases
+-      if (phase > 0) {
+-        for (let prevPhase = 0; prevPhase < phase; prevPhase++) {
+-          const { data: results } = await supabase
+-            .rpc('get_previous_phase_result', {
+-              p_current_phase: prevPhase + 1
++      // Skip previous phase check for phase 0
++      if (phase === 0) {
++        return true;
++      }
++
++      // First check local storage for completed phase
++      const localDb = await import('@/services/localDbService.js');
++      const localResult = await localDb.localDb.getPhaseResult(phase - 1);
++      
++      console.log('[VyveService] Local storage check:', {
++        phase: phase - 1,
++        hasLocalResult: !!localResult,
++        localStatus: localResult?.status,
++        timestamp: new Date().toISOString()
++      });
++
++      // If we have a completed result in local storage, use that
++      if (localResult?.status === 'completed' && localResult?.result?.content) {
++        return true;
++      }
++
++      // If not in local storage, check database
++      const { data: previousResults, error: queryError } = await getSupabaseClient()
++        .from('analysis_results')
++        .select('*')
++        .eq('phase_number', phase - 1)
++        .eq('metadata->>status', 'completed')
++        .order('created_at', { ascending: false })
++        .limit(1);
++
++      if (queryError) {
++        // Check if it's a permissions error
++        if (queryError.code === '42501' || queryError.message?.includes('permission denied')) {
++          console.error('[VyveService] Permission error checking previous phase:', {
++            error: queryError,
++            phase: phase - 1,
++            timestamp: new Date().toISOString()
++          });
++          // Try alternative query without metadata check
++          const { data: basicResults, error: basicError } = await getSupabaseClient()
++            .from('analysis_results')
++            .select('content, metadata')
++            .eq('phase_number', phase - 1)
++            .order('created_at', { ascending: false })
++            .limit(1);
++
++          if (basicError) {
++            throw basicError;
++          }
++
++          const previousPhase = basicResults?.[0];
++          const isCompleted = previousPhase?.metadata?.status === 'completed';
++
++          console.log('[VyveService] Alternative previous phase check:', {
++            phase: phase - 1,
++            hasResult: !!previousPhase,
++            status: previousPhase?.metadata?.status,
++            isCompleted,
++            timestamp: new Date().toISOString()
++          });
++
++          if (!previousPhase || !previousPhase.content || !isCompleted) {
++            throw new Error(`Please complete phase ${phase - 1} before starting phase ${phase}`);
++          }
++
++          // Save to local storage if found in database
++          if (previousPhase && isCompleted) {
++            await localDb.localDb.savePhaseResult({
++              phase: phase - 1,
++              status: 'completed',
++              result: previousPhase
+             });
+-          
+-          if (!results?.[0]?.content) {
+-            console.error(`[VyveService] Missing results for phase ${prevPhase}`);
+-            throw new Error(`Please complete phase ${prevPhase} before starting phase ${phase}`);
+           }
++
++          return true;
+         }
++        throw queryError;
++      }
++
++      const previousPhase = previousResults?.[0];
++      
++      console.log('[VyveService] Previous phase check:', {
++        phase: phase - 1,
++        hasResult: !!previousPhase,
++        status: previousPhase?.metadata?.status,
++        contentLength: previousPhase?.content?.length,
++        timestamp: new Date().toISOString()
++      });
++
++      if (!previousPhase || !previousPhase.content) {
++        console.error(`[VyveService] Previous phase ${phase - 1} not completed:`, {
++          hasResult: !!previousPhase,
++          hasContent: !!previousPhase?.content,
++          status: previousPhase?.metadata?.status,
++          timestamp: new Date().toISOString()
++        });
++        throw new Error(`Please complete phase ${phase - 1} before starting phase ${phase}`);
++      }
++
++      // Save to local storage if found in database
++      if (previousPhase) {
++        await localDb.localDb.savePhaseResult({
++          phase: phase - 1,
++          status: 'completed',
++          result: previousPhase
++        });
+       }
+       
+       return true;
+     } catch (error) {
+-      console.error('[VyveService] Error in canStartPhase:', error);
+-      throw error; // Propagate error to show in UI
++      console.error('[VyveService] Error in canStartPhase:', {
++        error,
++        phase,
++        message: error instanceof Error ? error.message : 'Unknown error',
++        timestamp: new Date().toISOString()
++      });
++      throw error;
+     }
+   }
+ 
+@@ -269,7 +388,7 @@ export class VyveService {
+       // Get all previous phase results
+       const allResults: string[] = [];
+       for (let prevPhase = 0; prevPhase < currentPhase; prevPhase++) {
+-        const { data: results, error } = await supabase
++        const { data: results, error } = await getSupabaseClient()
+           .rpc('get_previous_phase_result', {
+             p_current_phase: prevPhase + 1
+           });
+@@ -349,7 +468,7 @@ export class VyveService {
+    */
+   private static async applyFrameworkAnalysis(
+     documents: any,
+-    frameworks: any,
++    frameworks: string,
+     model: string
+   ): Promise<any> {
+     try {
+@@ -364,72 +483,52 @@ export class VyveService {
+         timestamp: new Date().toISOString()
+       }));
+ 
+-      // Validate document structure
++      // Ensure we have valid documents
+       if (!documents.citations || !Array.isArray(documents.citations)) {
+         throw new Error('Invalid document structure: citations array is missing or invalid');
+       }
+ 
+-      if (!documents.answer) {
+-        throw new Error('Invalid document structure: answer is missing');
+-      }
++      // Create a default answer if none exists
++      const answer = documents.answer || 'Please analyze the provided documents.';
+ 
+-      // Use the retrieved documents from Pinecone instead of frameworks
+-      const documentContext = documents.citations?.map((citation: any) => {
+-        if (!citation.score || !citation.content) {
+-          throw new Error('Invalid citation structure: missing score or content');
+-        }
+-        return `Document [Score: ${citation.score}]:\n${citation.content}`;
+-      }).join('\n\n') || '';
++      // Enhanced context building with relevance scores
++      const documentContext = documents.citations
++        ?.sort((a: any, b: any) => b.score - a.score) // Sort by relevance score
++        ?.map((citation: any, index: number) => {
++          if (!citation.score || !citation.content) {
++            throw new Error('Invalid citation structure: missing score or content');
++          }
++          // Add section numbering for better context organization
++          return `Section ${index + 1} [Relevance: ${(citation.score * 100).toFixed(1)}%]:\n${citation.content}`;
++        })
++        .join('\n\n');
+ 
+       if (!documentContext) {
+         throw new Error('Failed to generate document context from citations');
+       }
+ 
+-      const openaiService = new OpenAIService();
+-      let analysis;
+-      try {
+-        analysis = await openaiService.analyzeWithAssistant(
+-          documents.answer,
+-          documentContext,
+-          model
+-        );
+-      } catch (openaiError) {
+-        console.error('[VyveService] OpenAI analysis failed:', formatLogObject({
+-          error: openaiError instanceof Error ? openaiError.message : 'Unknown OpenAI error',
+-          model,
+-          answerLength: documents.answer?.length,
+-          contextLength: documentContext.length,
+-          timestamp: new Date().toISOString()
+-        }));
+-        throw new Error(`OpenAI analysis failed: ${openaiError instanceof Error ? openaiError.message : 'Unknown error'}`);
+-      }
++      // Add framework context if available
++      const fullContext = frameworks 
++        ? `${documentContext}\n\nFramework Context:\n${frameworks}`
++        : documentContext;
+ 
+-      if (!analysis || !analysis.message || !analysis.message.content) {
+-        throw new Error('Invalid analysis response structure');
++      const openaiService = new OpenAIService();
++      const analysis = await openaiService.analyzeWithAssistant(
++        answer,
++        fullContext,
++        model
++      );
++
++      // Validate analysis result
++      if (!analysis?.message?.content) {
++        throw new Error('Invalid analysis result: missing content');
+       }
+ 
+-      console.log('[VyveService] Framework analysis complete:', formatLogObject({
+-        hasAnalysis: !!analysis,
+-        contentLength: analysis?.message?.content?.length,
+-        usage: analysis?.usage,
+-        timestamp: new Date().toISOString()
+-      }));
+-
+       return analysis;
+     } catch (error) {
+       console.error('[VyveService] Error in applyFrameworkAnalysis:', formatLogObject({
+-        error: error instanceof Error ? {
+-          message: error.message,
+-          name: error.name,
+-          stack: error.stack
+-        } : 'Unknown error',
+-        documents: {
+-          hasCitations: !!documents?.citations,
+-          citationsCount: documents?.citations?.length || 0,
+-          hasAnswer: !!documents?.answer,
+-          answerLength: documents?.answer?.length || 0
+-        },
+-        model,
++        error: error instanceof Error ? error.message : 'Unknown error',
++        stack: error instanceof Error ? error.stack : undefined,
+         timestamp: new Date().toISOString()
+       }));
+       throw error;
+@@ -548,27 +647,58 @@ Provide a verification score (0-100) and specific feedback.`;
+ 
+     // Helper function to update step status
+     const updateStepStatus = async (stepName: string, status: 'in_progress' | 'completed' | 'error', details?: any) => {
+-      const stepIndex = metadata.conversation_log.findIndex(log => log.step === stepName);
+-      if (stepIndex !== -1) {
+-        metadata.conversation_log[stepIndex].status = status;
+-        metadata.conversation_log[stepIndex].timestamp = new Date().toISOString();
+-        if (details) {
+-          metadata.conversation_log[stepIndex].details = details;
+-        }
++      try {
++        const stepIndex = metadata.conversation_log.findIndex(log => log.step === stepName);
++        if (stepIndex !== -1) {
++          metadata.conversation_log[stepIndex].status = status;
++          metadata.conversation_log[stepIndex].timestamp = new Date().toISOString();
++          if (details) {
++            metadata.conversation_log[stepIndex].details = details;
++          }
+ 
+-        // Update the analysis result with new metadata
+-        await supabase
+-          .from('analysis_results')
+-          .update({ metadata })
+-          .eq('phase_number', phase)
+-          .order('created_at', { ascending: false })
+-          .limit(1);
++          // Create a new record if it doesn't exist, update if it does
++          const { data, error: upsertError } = await getSupabaseClient()
++            .from('analysis_results')
++            .upsert({
++              phase_number: phase,
++              metadata: metadata,
++              created_at: new Date().toISOString()
++            })
++            .select()
++            .single();
++
++          if (upsertError) {
++            console.error('[VyveService] Error updating step status:', {
++              error: upsertError,
++              step: stepName,
++              status,
++              timestamp: new Date().toISOString()
++            });
++            throw upsertError;
++          }
++
++          return data;
++        }
++      } catch (error) {
++        console.error('[VyveService] Error in updateStepStatus:', {
++          error,
++          step: stepName,
++          status,
++          timestamp: new Date().toISOString()
++        });
++        throw error;
+       }
+     };
+ 
+     try {
++      // Verify phase can be started
++      const canStart = await this.canStartPhase(phase);
++      if (!canStart) {
++        throw new Error(`Cannot start phase ${phase} - prerequisites not met`);
++      }
++
+       // Check authentication - allow anon access with fallback
+-      const { data: session } = await supabase.auth.getSession();
++      const { data: session } = await getSupabaseClient().auth.getSession();
+       console.log('[VyveService] Authentication status:', {
+         hasSession: !!session?.session,
+         isAnon: !session?.session,
+@@ -614,11 +744,28 @@ Provide a verification score (0-100) and specific feedback.`;
+ 
+       // Step 3: OpenAI Analysis
+       const openaiService = new OpenAIService();
++      
++      // Enhanced validation for analysis result
++      if (!analysis?.message?.content) {
++        console.error('[VyveService] Invalid analysis result:', {
++          hasAnalysis: !!analysis,
++          hasMessage: !!analysis?.message,
++          hasContent: !!analysis?.message?.content,
++          analysisStructure: JSON.stringify(analysis, null, 2),
++          timestamp: new Date().toISOString()
++        });
++        throw new Error('Invalid analysis result: message content is undefined or empty');
++      }
++
++      // Create a validated message using the content from analysis.message
++      const validatedMessage = {
++        role: 'user' as const,
++        content: analysis.message.content
++      };
++
+       const formattedAnalysis = await openaiService.analyze({
+         model,
+-        messages: [
+-          { role: 'user', content: analysis.content }
+-        ]
++        messages: [validatedMessage]
+       });
+       
+       await updateStepStatus('OpenAI Analysis', 'completed', {
+@@ -627,6 +774,16 @@ Provide a verification score (0-100) and specific feedback.`;
+       await updateStepStatus('Format Verification', 'in_progress');
+ 
+       // Step 4: Format verification - using analyze method with format verification prompt
++      if (!formattedAnalysis?.content) {
++        console.error('[VyveService] Invalid formatted analysis:', {
++          hasFormattedAnalysis: !!formattedAnalysis,
++          hasContent: !!formattedAnalysis?.content,
++          analysisStructure: JSON.stringify(formattedAnalysis, null, 2),
++          timestamp: new Date().toISOString()
++        });
++        throw new Error('Invalid formatted analysis: content is undefined or empty');
++      }
++
+       const formatVerificationPrompt = `
+ Please verify and adjust the following analysis to match the exact format specified in the original prompt:
+ 
+@@ -642,13 +799,28 @@ Instructions:
+ 3. Keep the same level of detail and accuracy
+ 4. Return the reformatted analysis only`;
+ 
++      // Create validated message for format verification
++      const verificationMessage = {
++        role: 'user' as const,
++        content: formatVerificationPrompt
++      };
++
+       const formatVerification = await openaiService.analyze({
+         model,
+-        messages: [
+-          { role: 'user', content: formatVerificationPrompt }
+-        ]
++        messages: [verificationMessage]
+       });
+ 
++      // Validate format verification result
++      if (!formatVerification?.content) {
++        console.error('[VyveService] Invalid format verification result:', {
++          hasVerification: !!formatVerification,
++          hasContent: !!formatVerification?.content,
++          verificationStructure: JSON.stringify(formatVerification, null, 2),
++          timestamp: new Date().toISOString()
++        });
++        throw new Error('Invalid format verification result: content is undefined or empty');
++      }
++
+       await updateStepStatus('Format Verification', 'completed', {
+         verificationLength: formatVerification.content?.length || 0
+       });
+@@ -661,27 +833,164 @@ Instructions:
+       });
+       await updateStepStatus('Saving Results', 'in_progress');
+ 
+-      // Save the final results
+-      const { error: insertError } = await supabase
++      // Save the final results with proper content and metadata
++      const finalMetadata = {
++        ...metadata,
++        status: 'completed',
++        model,
++        usage: analysis.usage,
++        verification: verificationResults,
++        key_findings: formatVerification.content.split('\n').filter(line => line.trim().startsWith('•')),
++        conversation_log: metadata.conversation_log.map(log => ({
++          ...log,
++          status: 'completed'
++        }))
++      };
++
++      // Sanitize and validate the content and metadata
++      const sanitizedContent = formatVerification.content.replace(/[\u0000-\u001F\u007F-\u009F]/g, '');
++      const sanitizedMetadata = JSON.parse(JSON.stringify(finalMetadata));
++
++      // First try to get existing record
++      const { data: existingRecord, error: fetchError } = await getSupabaseClient()
+         .from('analysis_results')
+-        .insert({
+-          phase_number: phase,
+-          content: formatVerification.content,
+-          metadata: {
+-            ...metadata,
+-            status: 'completed',
+-            model,
+-            usage: analysis.usage,
+-            verification: verificationResults,
+-            key_findings: [], // To be populated by the format verification
+-            conversation_log: metadata.conversation_log.map(log => ({
+-              ...log,
+-              status: 'completed'
+-            }))
+-          }
++        .select('*')
++        .eq('phase_number', phase)
++        .single();
++
++      if (fetchError && fetchError.code !== 'PGRST116') { // PGRST116 is "not found" error
++        console.error('[VyveService] Error checking existing record:', {
++          error: fetchError,
++          phase,
++          timestamp: new Date().toISOString()
++        });
++      }
++
++      // Prepare the base record
++      const baseRecord = {
++        content: sanitizedContent,
++        metadata: sanitizedMetadata,
++        updated_at: new Date().toISOString()
++      };
++
++      let saveOperation;
++      if (existingRecord) {
++        // Update existing record
++        saveOperation = getSupabaseClient()
++          .from('analysis_results')
++          .update(baseRecord)
++          .eq('phase_number', phase);
++      } else {
++        // Insert new record
++        saveOperation = getSupabaseClient()
++          .from('analysis_results')
++          .insert({
++            ...baseRecord,
++            phase_number: phase,
++            created_at: new Date().toISOString()
++          });
++      }
++
++      const { error: saveError } = await saveOperation;
++
++      if (saveError) {
++        console.error('[VyveService] Error saving analysis results:', {
++          error: saveError,
++          phase,
++          contentLength: sanitizedContent.length,
++          isUpdate: !!existingRecord,
++          timestamp: new Date().toISOString()
+         });
+ 
+-      if (insertError) throw insertError;
++        // Handle different error types
++        if (saveError.code === '23505' || // Unique violation
++            saveError.code === '406' ||   // Not Acceptable
++            saveError.code === '413') {   // Payload too large
++          console.log('[VyveService] Attempting alternative save method');
++          
++          try {
++            // Try RPC method first
++            const { error: rpcError } = await getSupabaseClient()
++              .rpc('handle_analysis_result', {
++                p_phase_number: phase,
++                p_content: sanitizedContent,
++                p_metadata: sanitizedMetadata
++              });
++
++            if (!rpcError) {
++              console.log('[VyveService] Successfully saved using RPC method');
++              await updateStepStatus('Saving Results', 'completed');
++              return;
++            }
++
++            // If RPC fails, try delete + insert
++            const { error: deleteError } = await getSupabaseClient()
++              .from('analysis_results')
++              .delete()
++              .eq('phase_number', phase);
++
++            if (deleteError) {
++              console.error('[VyveService] Error deleting existing record:', {
++                error: deleteError,
++                phase,
++                timestamp: new Date().toISOString()
++              });
++              throw deleteError;
++            }
++
++            // Try chunked insert if content is large
++            if (sanitizedContent.length > 1000000) { // 1MB threshold
++              const chunks = Math.ceil(sanitizedContent.length / 1000000);
++              const contentChunks = Array.from({ length: chunks }, (_, i) => 
++                sanitizedContent.slice(i * 1000000, (i + 1) * 1000000)
++              );
++
++              const chunkedMetadata = {
++                ...sanitizedMetadata,
++                chunks: chunks,
++                currentChunk: 1
++              };
++
++              for (let i = 0; i < chunks; i++) {
++                const { error: chunkError } = await getSupabaseClient()
++                  .from('analysis_results')
++                  .insert({
++                    phase_number: phase,
++                    content: contentChunks[i],
++                    metadata: { ...chunkedMetadata, currentChunk: i + 1 },
++                    created_at: new Date().toISOString(),
++                    updated_at: new Date().toISOString()
++                  });
++
++                if (chunkError) throw chunkError;
++              }
++            } else {
++              // Regular insert
++              const { error: finalInsertError } = await getSupabaseClient()
++                .from('analysis_results')
++                .insert({
++                  phase_number: phase,
++                  content: sanitizedContent,
++                  metadata: sanitizedMetadata,
++                  created_at: new Date().toISOString(),
++                  updated_at: new Date().toISOString()
++                });
++
++              if (finalInsertError) throw finalInsertError;
++            }
++          } catch (fallbackError) {
++            console.error('[VyveService] All save attempts failed:', {
++              error: fallbackError,
++              phase,
++              timestamp: new Date().toISOString()
++            });
++            throw fallbackError;
++          }
++        } else {
++          throw saveError;
++        }
++      }
++
+       await updateStepStatus('Saving Results', 'completed');
+ 
+       console.log('[VyveService] Phase analysis completed successfully:', {
+@@ -693,7 +1002,10 @@ Instructions:
+ 
+       return {
+         content: formatVerification.content,
+-        metadata: metadata
++        metadata: {
++          ...metadata,
++          status: 'completed'
++        }
+       };
+ 
+     } catch (error) {
+@@ -708,7 +1020,7 @@ Instructions:
+       }
+ 
+       // Save error state
+-      await supabase
++      await getSupabaseClient()
+         .from('analysis_results')
+         .insert({
+           phase_number: phase,
+diff --git a/src/types/vyve.ts b/src/types/vyve.ts
+index 21a0ef7..a896c28 100644
+--- a/src/types/vyve.ts
++++ b/src/types/vyve.ts
+@@ -5,16 +5,15 @@ export interface PhasePrompt {
+   prompt: string;
+   document_ids: number[];
+   created_at?: string;
+-  phase: number;
+-  model: string;
++  updated_at?: string;
+ }
+ 
+ export interface MdDocument {
+-  id: string;
++  id: number;
+   filename: string;
+   content: string;
+-  created_at: string;
+-  metadata?: Record<string, any>;
++  created_at?: string;
++  updated_at?: string;
+ }
+ 
+ export interface ConversationLogEntry {
+@@ -48,10 +47,12 @@ export interface AnalysisMetadata {
+ }
+ 
+ export interface AnalysisResult {
+-  phase: number;
+-  result: any;
+-  timestamp: string;
+-  metadata?: AnalysisMetadata;
++  id?: number;
++  phase_number: number;
++  content: string;
++  metadata?: Record<string, any>;
++  created_at?: string;
++  updated_at?: string;
+ }
+ 
+ export interface PhaseConfig {
+diff --git a/src/utils/validationUtils.ts b/src/utils/validationUtils.ts
+index d41ea6b..dff503e 100644
+--- a/src/utils/validationUtils.ts
++++ b/src/utils/validationUtils.ts
+@@ -136,4 +136,36 @@ function generateRecommendation(
+   return recommendations.length > 0
+     ? `Recommended actions: ${recommendations.join('; ')}.`
+     : 'Review the identified discrepancies and consider adjusting the analysis parameters.';
++}
++
++export function validateMessage(message: any): boolean {
++  if (!message || typeof message !== 'object') return false;
++  if (!message.role || typeof message.role !== 'string') return false;
++  if (message.content === undefined || message.content === null) return false;
++  if (typeof message.content !== 'string') return false;
++  return message.content.trim().length > 0;
++}
++
++export function validateMessages(messages: any[]): { 
++  isValid: boolean; 
++  error?: string;
++} {
++  if (!Array.isArray(messages)) {
++    return { isValid: false, error: 'Messages must be an array' };
++  }
++
++  if (messages.length === 0) {
++    return { isValid: false, error: 'Messages array cannot be empty' };
++  }
++
++  for (const message of messages) {
++    if (!validateMessage(message)) {
++      return { 
++        isValid: false, 
++        error: `Invalid message: ${JSON.stringify(message)}` 
++      };
++    }
++  }
++
++  return { isValid: true };
+ } 
+\ No newline at end of file
+diff --git a/supabase/migrations/20240318000000_analysis_results_procedure.sql b/supabase/migrations/20240318000000_analysis_results_procedure.sql
+index 3d04114..6f0084c 100644
+--- a/supabase/migrations/20240318000000_analysis_results_procedure.sql
++++ b/supabase/migrations/20240318000000_analysis_results_procedure.sql
+@@ -21,6 +21,7 @@ ALTER TABLE analysis_results ENABLE ROW LEVEL SECURITY;
+ DROP POLICY IF EXISTS "Enable read access for all users" ON analysis_results;
+ DROP POLICY IF EXISTS "Enable insert access for all users" ON analysis_results;
+ DROP POLICY IF EXISTS "Enable update access for all users" ON analysis_results;
++DROP POLICY IF EXISTS "Enable delete access for all users" ON analysis_results;
+ 
+ -- Create policies for both authenticated and anonymous users
+ CREATE POLICY "Enable read access for all users"
+@@ -42,6 +43,12 @@ CREATE POLICY "Enable update access for all users"
+     USING (true)
+     WITH CHECK (true);
+ 
++CREATE POLICY "Enable delete access for all users"
++    ON analysis_results
++    FOR DELETE
++    TO PUBLIC
++    USING (true);
++
+ -- Function to handle analysis results with RLS bypass
+ CREATE OR REPLACE FUNCTION handle_analysis_result(
+     p_phase_number INTEGER,
+@@ -101,7 +108,8 @@ RETURNS void
+ SECURITY DEFINER
+ AS $$
+ BEGIN
+-    DELETE FROM analysis_results;
++    DELETE FROM analysis_results
++    WHERE phase_number >= 0;
+ END;
+ $$ LANGUAGE plpgsql;
+ 
+diff --git a/tsconfig.json b/tsconfig.json
+index d540325..6f9a02a 100644
+--- a/tsconfig.json
++++ b/tsconfig.json
+@@ -1,12 +1,21 @@
+ {
+   "extends": "./tsconfig.app.json",
+   "compilerOptions": {
+-    "module": "ESNext",
+-    "moduleResolution": "Bundler",
++    "module": "NodeNext",
++    "moduleResolution": "NodeNext",
+     "outDir": "dist",
+     "allowJs": true,
+     "esModuleInterop": true,
+-    "allowSyntheticDefaultImports": true
++    "allowSyntheticDefaultImports": true,
++    "resolveJsonModule": true,
++    "baseUrl": ".",
++    "paths": {
++      "@/*": ["src/*"]
++    }
++  },
++  "ts-node": {
++    "esm": true,
++    "experimentalSpecifiers": true
+   },
+   "include": ["src/**/*"],
+   "exclude": ["node_modules"]
+-- 
+2.39.5 (Apple Git-154)
+

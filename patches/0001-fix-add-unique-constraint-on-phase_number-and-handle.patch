@@ -1,0 +1,41 @@
+From 6972484bf74db3659c94b60ff5105ab7d3b49943 Mon Sep 17 00:00:00 2001
+From: jakobwredstrom <jakob@amplitude.ventures>
+Date: Thu, 6 Feb 2025 13:20:46 +0100
+Subject: [PATCH 1/2] fix: add unique constraint on phase_number and handle
+ existing policies in analysis_results migration
+
+---
+ .../20240318000000_analysis_results_procedure.sql      | 10 ++++++++--
+ 1 file changed, 8 insertions(+), 2 deletions(-)
+
+diff --git a/supabase/migrations/20240318000000_analysis_results_procedure.sql b/supabase/migrations/20240318000000_analysis_results_procedure.sql
+index c496686..3d04114 100644
+--- a/supabase/migrations/20240318000000_analysis_results_procedure.sql
++++ b/supabase/migrations/20240318000000_analysis_results_procedure.sql
+@@ -7,15 +7,21 @@ CREATE TABLE IF NOT EXISTS analysis_results (
+     content TEXT,
+     created_at TIMESTAMPTZ DEFAULT NOW(),
+     metadata JSONB DEFAULT '{}'::jsonb,
+-    CONSTRAINT valid_phase_number CHECK (phase_number >= 0)
++    CONSTRAINT valid_phase_number CHECK (phase_number >= 0),
++    CONSTRAINT unique_phase_number UNIQUE (phase_number)
+ );
+ 
+ -- Create index on phase_number for faster lookups
+ CREATE INDEX IF NOT EXISTS idx_analysis_results_phase_number ON analysis_results(phase_number);
+ 
+--- Enable Row Level Security
++-- Enable Row Level Security (idempotent operation)
+ ALTER TABLE analysis_results ENABLE ROW LEVEL SECURITY;
+ 
++-- Drop existing policies if they exist
++DROP POLICY IF EXISTS "Enable read access for all users" ON analysis_results;
++DROP POLICY IF EXISTS "Enable insert access for all users" ON analysis_results;
++DROP POLICY IF EXISTS "Enable update access for all users" ON analysis_results;
++
+ -- Create policies for both authenticated and anonymous users
+ CREATE POLICY "Enable read access for all users"
+     ON analysis_results
+-- 
+2.39.5 (Apple Git-154)
+

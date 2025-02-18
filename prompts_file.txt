@@ -1,0 +1,276 @@
+=== DOCUMENT DESCRIPTIONS ===
+The following documents are available in the vector store and must be retrieved using exact filenames:
+
+1. Best Practice_Assessment.md
+Examples of best practice assessments, showcasing effective assessment methodologies within a sustainability context.
+
+2. Best Practice_Business.md
+Examples of best practice business cases illustrating sustainable practices relevant to various parts of the business model.
+
+3. Sample Questions.md
+Sample questions for gathering relevant information on impact categories across business activities, designed to facilitate detailed analysis.
+
+4. Governance Impact On Activity Level.md
+Overview of governance impact areas relevant to each sub-activity within the production framework.
+
+5. Social Impact On Activity Level.md
+Overview of social impact areas relevant to each sub-activity within the production framework.
+
+6. Production Framework.html
+The production framework matrix, with activities (horizontal) and ESG impact categories (vertical).
+
+7. Production Framework Documentation.md
+Documenting the Production Framework with a practical overview, step-by-step process, and rules. It explains the overall SBMAP framework and production framework specifically.
+
+8. Mindset Document.md
+Explains the preferred mindset in the digital tool and AI agents, aligning with SBMAP's sustainability-focused approach.
+
+9. Environmental Impact On Activity Level.md
+Overview of environmental impact areas relevant to each sub-activity within the production framework.
+
+10. Key Impact Areas Per Industry.md
+Overview of essential impact areas (ESG) for each industry, identifying priority areas across sectors.
+
+11. Industry Categorization Level 2.md
+Further classification of industries with additional details based on the NACE framework.
+
+12. Industry And Activity Relevance.md
+Overview of industry relevance for each activity in the framework, based on NACE categorization, with ratings indicating how pertinent activities are across sectors.
+
+13. Industry Categorization .md
+Categorization and descriptions of industries based on the EU NACE classification, outlining primary sectors and activities.
+
+14. Impact Categories Description.md
+General description of all impact categories (Environmental, Social, and Governance), outlining main areas and sub-categories.
+
+15. Sustainability Activity Description For Production Framework.md
+Descriptions of all main and sub-activities in the production framework from a sustainability perspective, detailing Environmental, Social, and Governance (ESG) terms.
+
+16. Activity Description (Production Framework).md
+General descriptions of all main and sub-activities in the production framework, providing a foundational understanding of each activity's function.
+=== END DOCUMENT DESCRIPTIONS ===
+
+=== GLOBAL INSTRUCTIONS ===
+IMPORTANT NOTES FOR ALL PHASES:
+- Focus ONLY on the current phase's objective
+- Do not include analysis meant for other phases
+- Use evidence from documents when available
+- Clearly indicate any assumptions made
+- Follow the specified output format exactly
+- Each phase is independent - wait for human input before proceeding
+=== END GLOBAL INSTRUCTIONS ===
+
+### PHASE 0: DOCUMENT ANALYSIS ###
+=== PROMPT RETRIEVAL TEST ===
+IF YOU SEE THIS TEXT:
+1. First output: "=== PROMPTS FILE SUCCESSFULLY ACCESSED ==="
+2. Then proceed with rest of analysis
+3. Ignore any other configuration metadata
+=== END PROMPT RETRIEVAL TEST ===
+
+OBJECTIVE: Initial document comprehension and business understanding
+
+REQUIRED DOCUMENTS:
+- Production Framework Documentation.md
+- Industry Categorization .md
+- Industry Categorization Level 2.md
+
+TASK:
+Begin document analysis phase. Before continuing, analyze all required documents plus user-uploaded business documentation to understand:
+1. Framework context from Production Framework Documentation.md
+2. Industry classification using both categorization documents
+3. User's business documentation in context of framework
+
+Generate a concise summary (~300 words) demonstrating comprehension of business context.
+
+CONSTRAINTS:
+- Focus only on understanding and summarizing
+- Do not make assessments or recommendations
+- Stay within factual information from documents
+
+OUTPUT FORMAT:
+1. Key Findings
+2. Detailed Analysis
+3. Document Coverage
+
+### PHASE 1: ACTIVITY IDENTIFICATION ###
+OBJECTIVE: Identify and analyze key business activities
+
+REQUIRED DOCUMENTS:
+- Production Framework.html
+- Production Framework Documentation.md 
+- Industry Categorization .md
+- Industry Categorization Level 2.md
+- Activity Description (Production Framework).md
+- Sustainability Activity Description For Production Framework.md
+- Industry And Activity Relevance.md
+
+TASK:
+Identify the key activities most relevant to the business from this list:
+- Procurement and Supply Chain Management
+- Production and Operations
+- Product and Service Development
+- Marketing and Sales
+- Financial Management
+- Human Resources
+- Information Technology
+- Customer Service and Support
+- Sustainability and Compliance
+- Strategic Management and Planning
+- Research and Innovation
+
+Use horizontal categories in Production Framework and only select relevant sub-categories.
+
+OUTPUT FORMAT:
+For each relevant activity:
+1. Activity Name
+2. Relevance to Business
+3. Supporting Evidence from Documents
+4. Key Sub-activities
+
+PHASE 2: ENVIRONMENTAL CATEGORY IDENTIFICATION
+OBJECTIVE: Map environmental impacts to business activities
+TASK:
+Using identified activities, search and analyze:
+
+Impact Categories Description.md
+Key Impact Areas Per Industry.md
+Environmental Impact On Activity Level.md
+
+Map vertical environmental categories (sub-sub-categories) to horizontal business activities. Focus on:
+
+Energy/Climate impacts
+Water management
+Waste/Circular economy
+Biodiversity
+Air quality
+
+OUTPUT FORMAT:
+For each activity pairing:
+
+Activity Name & Sub-activity
+Environmental Categories (prioritized)
+Industry-Specific Impact Ratings
+Evidence-Based Justification
+
+### PHASE 3: INFORMATION REQUIREMENTS ###
+OBJECTIVE: Generate comprehensive analysis questions
+
+TASK:
+Based on identified activities and environmental categories, create detailed questions covering:
+- Current practices
+- Initiatives
+- Targets
+- Performance metrics
+- Challenges
+- Achievements
+
+Required documents (retrieve from vector store):
+- Sample Questions.md
+- Production Framework.html
+- Impact Categories Description.md
+- Key Impact Areas Per Industry.md
+- Environmental Impact On Activity Level.md
+- Mindset Document.md
+
+OUTPUT FORMAT:
+For each activity-category pair:
+1. Activity & Category
+2. Key Questions
+3. Required Information Type
+4. Purpose of Information
+
+### PHASE 4: INFORMATION GAP ANALYSIS ###
+OBJECTIVE: Assess information availability and quality
+
+TASK:
+Rate information quality for each question (0-5 scale):
+0 = No information
+5 = Complete information
+
+Required documents (retrieve from vector store):
+- Production Framework.html
+- Impact Categories Description.md
+- Key Impact Areas Per Industry.md
+- Environmental Impact On Activity Level.md
+- Mindset Document.md
+
+OUTPUT FORMAT:
+For each question:
+1. Question Text
+2. Information Score (0-5)
+3. Available Information
+4. Assumptions Made (if any)
+
+### PHASE 5: GAP ANALYSIS ###
+OBJECTIVE: Analyze strengths and gaps
+
+TASK:
+Assess each key activity area for:
+- Strengths
+- Improvement Areas
+- Information Gaps
+
+Required documents (retrieve from vector store):
+- Production Framework.html
+- Best Practice_Assessment.md
+- Best Practice_Business.md
+- Mindset Document.md
+
+OUTPUT FORMAT:
+For each key activity:
+1. Activity Name
+2. Sub-activity
+3. Strengths (bullet points)
+4. Improvement Areas (bullet points)
+5. Information Gaps (bullet points)
+
+### PHASE 6: SOCIAL IMPACT ANALYSIS ###
+OBJECTIVE: Analyze social impact categories
+
+TASK:
+Map social impact categories to key activities using:
+- Labor Practices
+- Human Rights
+- Community Impact
+- Product Responsibility
+- Stakeholder Engagement
+
+Required documents (retrieve from vector store):
+- Production Framework.html
+- Impact Categories Description.md
+- Key Impact Areas Per Industry.md
+- Social Impact On Activity Level.md
+- Mindset Document.md
+
+OUTPUT FORMAT:
+For each key activity:
+1. Activity Name
+2. Relevant Social Categories
+3. Impact Assessment
+4. Supporting Evidence
+
+### PHASE 7: GOVERNANCE ANALYSIS ###
+OBJECTIVE: Analyze governance structures
+
+TASK:
+Map governance categories to key activities using:
+- Corporate Structure
+- Risk Management
+- Compliance
+- Ethics
+- Stakeholder Management
+
+Required documents (retrieve from vector store):
+- Production Framework.html
+- Impact Categories Description.md
+- Key Impact Areas Per Industry.md
+- Governance Impact On Activity Level.md
+- Mindset Document.md
+
+OUTPUT FORMAT:
+For each key activity:
+1. Activity Name
+2. Relevant Governance Categories
+3. Current Practices
+4. Areas for Enhancement

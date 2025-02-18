@@ -1,0 +1,21 @@
+{
+  "compilerOptions": {
+    "allowJs": true,
+    "lib": ["deno.window", "deno.ns", "dom"],
+    "strict": true,
+    "types": ["https://deno.land/x/types/index.d.ts"]
+  },
+  "importMap": {
+    "imports": { 
+      "openai": "https://esm.sh/openai@4.28.0",
+      "@supabase/supabase-js": "https://esm.sh/@supabase/supabase-js@2.7.1",
+      "std/": "https://deno.land/std@0.168.0/"
+    }
+  },
+  "imports": {
+    "@pinecone-database/pinecone": "npm:@pinecone-database/pinecone@4.1.0"
+  },
+  "tasks": {
+    "test": "deno run --allow-env --allow-net test_pinecone.ts"
+  }
+} 

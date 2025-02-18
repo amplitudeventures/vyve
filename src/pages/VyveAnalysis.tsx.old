@@ -1,0 +1,275 @@
+import { useState, useEffect } from "react";
+import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { ArrowLeft, Sparkles, Settings, AlertCircle, ChevronRight, RefreshCw } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { PhaseNavigation } from "@/components/analysis/PhaseNavigation";
+import { PhaseContent } from "@/components/analysis/phases/PhaseContent";
+import { useVyveAnalysis } from "@/hooks/useVyveAnalysis";
+import { useToast } from "@/components/ui/use-toast";
+import { supabase } from "@/integrations/supabase/client";
+
+const VyveAnalysis = () => {
+  const [currentPhase, setCurrentPhase] = useState(0);
+  const navigate = useNavigate();
+  const { toast } = useToast();
+  const { phases, loading, error, loadPhaseData, startPhaseAnalysis, setPhases, clearAllPhases } = useVyveAnalysis();
+
+  // Load data for current phase
+  useEffect(() => {
+    loadPhaseData(currentPhase);
+  }, [currentPhase]);
+
+  // Handle phase change
+  const handlePhaseChange = (phase: number) => {
+    setCurrentPhase(phase);
+  };
+
+  // Handle start analysis
+  const handleStartAnalysis = async (model: string) => {
+    try {
+      // Immediately update the phase status to loading
+      setPhases(prevPhases => 
+        prevPhases.map(p => 
+          p.phase === currentPhase
+            ? {
+                ...p,
+                status: 'in_progress',
+                result: {
+                  ...p.result,
+                  metadata: {
+                    status: 'in_progress',
+                    conversation_log: [
+                      {
+                        step: 'Initial Document Retrieval',
+                        status: 'in_progress',
+                        content: '',
+                        timestamp: new Date().toISOString(),
+                        details: { type: 'pinecone_query' }
+                      }
+                    ]
+                  }
+                }
+              }
+            : p
+        )
+      );
+
+      await startPhaseAnalysis(currentPhase, model);
+      
+      toast({
+        title: "Analysis Complete",
+        description: `Phase ${currentPhase} analysis completed successfully.`,
+      });
+    } catch (err) {
+      // Update the phase status to error
+      setPhases(prevPhases => 
+        prevPhases.map(p => 
+          p.phase === currentPhase
+            ? {
+                ...p,
+                status: 'error',
+                error: err instanceof Error ? err.message : 'Failed to start analysis'
+              }
+            : p
+        )
+      );
+
+      toast({
+        title: "Error",
+        description: err instanceof Error ? err.message : "Failed to start analysis",
+        variant: "destructive",
+      });
+    }
+  };
+
+  // Handle restart
+  const handleRestart = async () => {
+    try {
+      // First try to use the RPC function
+      const { error: rpcError } = await supabase.rpc('clear_analysis_results');
+
+      if (rpcError) {
+        console.error('Error using RPC to clear analysis results:', rpcError);
+        
+        // Fallback: Delete all records with a WHERE clause that matches all records
+        const { error: deleteError } = await supabase
+          .from('analysis_results')
+          .delete()
+          .gte('phase_number', 0); // This ensures we delete all phases while satisfying the WHERE clause requirement
+
+        if (deleteError) {
+          console.error('Error clearing analysis results:', deleteError);
+          throw deleteError;
+        }
+      }
+
+      // Then clear local data
+      await clearAllPhases();
+      
+      // Clear browser console
+      console.clear();
+      
+      toast({
+        title: "Analysis Reset",
+        description: "All phase results have been cleared. Page will refresh...",
+      });
+
+      // Short delay to show the toast before reload
+      setTimeout(() => {
+        window.location.reload();
+      }, 1500);
+    } catch (err) {
+      console.error('Error clearing phases:', err);
+      toast({
+        title: "Error",
+        description: err instanceof Error ? err.message : "Failed to reset analysis. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  return (
+    <div className="min-h-screen bg-background relative overflow-hidden">
+      {/* Enhanced Background Effects - Reduced brightness */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute top-[-50%] left-[-50%] w-[200%] h-[200%] bg-[radial-gradient(circle_at_center,rgba(255,255,255,0.03)_0%,transparent_25%)] animate-[spin_20s_linear_infinite]" />
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_80%_20%,rgba(120,119,198,0.08),transparent_25%)]" />
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_80%,rgba(0,183,255,0.08),transparent_25%)]" />
+        <div className="absolute inset-0 bg-gradient-to-b from-background via-background/80 to-background" />
+        
+        {/* Additional decorative elements - Reduced opacity */}
+        <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-blue-500/0 via-purple-500/10 to-pink-500/0" />
+        <div className="absolute bottom-0 left-0 w-full h-1 bg-gradient-to-r from-pink-500/0 via-purple-500/10 to-blue-500/0" />
+        <div className="absolute left-0 top-0 w-1 h-full bg-gradient-to-b from-blue-500/0 via-purple-500/10 to-pink-500/0" />
+        <div className="absolute right-0 top-0 w-1 h-full bg-gradient-to-b from-pink-500/0 via-purple-500/10 to-blue-500/0" />
+      </div>
+
+      {/* Main Content */}
+      <div className="relative min-h-screen flex flex-col">
+        {/* Enhanced Top Navigation Bar */}
+        <div className="relative">
+          {/* Top Gradient Line - Reduced opacity */}
+          <div className="absolute top-0 left-0 w-full h-[2px] bg-gradient-to-r from-transparent via-purple-500/30 to-transparent" />
+          
+          {/* Navigation Content */}
+          <div className="relative backdrop-blur-md bg-background/40 border-b border-white/5">
+            <div className="container mx-auto py-5 px-6 max-w-[95%] xl:max-w-[90%] 2xl:max-w-[85%]">
+              <div className="flex items-center justify-between">
+                {/* Left Side */}
+                <div className="flex items-center gap-8">
+                  <Button
+                    variant="outline"
+                    onClick={() => navigate('/')}
+                    className="relative group overflow-hidden rounded-lg border-white/10 hover:border-white/20 transition-colors"
+                  >
+                    <div className="absolute inset-0 bg-gradient-to-r from-blue-500/5 via-purple-500/5 to-pink-500/5 opacity-0 group-hover:opacity-100 transition-opacity" />
+                    <div className="relative flex items-center gap-2">
+                      <ArrowLeft className="h-4 w-4 transition-transform group-hover:-translate-x-0.5" />
+                      <span className="font-medium">Back to Home</span>
+                    </div>
+                  </Button>
+
+                  <div className="flex items-center gap-4">
+                    <div className="h-8 w-[1px] bg-gradient-to-b from-white/[0.01] via-white/5 to-white/[0.01]" />
+                    <div className="flex items-center gap-4">
+                      <div className="relative group">
+                        <div className="absolute -inset-[1px] bg-gradient-to-r from-blue-500/40 via-purple-500/40 to-pink-500/40 rounded-xl opacity-50 blur group-hover:opacity-70 transition-opacity" />
+                        <div className="relative w-11 h-11 rounded-xl bg-background/90 backdrop-blur-sm flex items-center justify-center">
+                          <Sparkles className="h-5 w-5 text-blue-400/80 group-hover:text-blue-300 transition-colors" />
+                        </div>
+                      </div>
+                      <div>
+                        <h1 className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-400/90 via-purple-400/90 to-pink-400/90">
+                          Vyve Analysis
+                        </h1>
+                        <p className="text-sm text-white/40">
+                          Analyze and process your data
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Right Side */}
+                <div className="flex items-center gap-4">
+                  <Button
+                    variant="outline"
+                    onClick={handleRestart}
+                    className="relative group overflow-hidden rounded-lg border-white/10 hover:border-white/20 transition-colors"
+                  >
+                    <div className="absolute inset-0 bg-gradient-to-r from-red-500/5 via-orange-500/5 to-yellow-500/5 opacity-0 group-hover:opacity-100 transition-opacity" />
+                    <div className="relative flex items-center gap-2">
+                      <RefreshCw className="h-4 w-4 transition-transform group-hover:rotate-180" />
+                      <span className="font-medium">Reset All Data</span>
+                    </div>
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={() => navigate('/select-app')}
+                    className="relative group overflow-hidden rounded-lg border-white/10 hover:border-white/20 transition-colors"
+                  >
+                    <div className="absolute inset-0 bg-gradient-to-r from-pink-500/5 via-purple-500/5 to-blue-500/5 opacity-0 group-hover:opacity-100 transition-opacity" />
+                    <div className="relative flex items-center gap-2">
+                      <Settings className="h-4 w-4 transition-transform group-hover:rotate-90" />
+                      <span className="font-medium">Switch App</span>
+                      <ChevronRight className="h-4 w-4 opacity-0 group-hover:opacity-100 transition-all group-hover:translate-x-0.5" />
+                    </div>
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Bottom Shadow - Reduced opacity */}
+          <div className="absolute bottom-0 left-0 w-full h-[1px] bg-gradient-to-r from-transparent via-white/3 to-transparent" />
+          <div className="absolute bottom-0 left-0 w-full h-8 bg-gradient-to-b from-background/30 to-transparent pointer-events-none" />
+        </div>
+
+        {/* Main Content Area */}
+        <div className="flex-1 relative">
+          <div className="container mx-auto py-8 px-6 max-w-[95%] xl:max-w-[90%] 2xl:max-w-[85%] space-y-8">
+            {/* Main Content Card */}
+            <Card className="card-glow-subtle glass">
+              <CardContent className="p-8">
+                <PhaseNavigation 
+                  currentPhase={currentPhase}
+                  onPhaseChange={handlePhaseChange}
+                />
+                {error ? (
+                  <div className="mt-6 p-6 rounded-lg bg-red-500/5 border border-red-500/10 backdrop-blur-sm">
+                    <div className="flex items-center gap-3 text-red-400/90">
+                      <AlertCircle className="h-5 w-5" />
+                      <p>{error}</p>
+                    </div>
+                  </div>
+                ) : (
+                  <PhaseContent 
+                    phaseData={phases[currentPhase] || { 
+                      phase: currentPhase,
+                      name: `Phase ${currentPhase}`,
+                      description: "Loading...",
+                      status: "pending"
+                    }}
+                    onStart={handleStartAnalysis}
+                    onUpdate={(updatedPhaseData) => {
+                      setPhases(prevPhases => 
+                        prevPhases.map(p => 
+                          p.phase === currentPhase
+                            ? updatedPhaseData
+                            : p
+                        )
+                      );
+                    }}
+                  />
+                )}
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default VyveAnalysis; 
