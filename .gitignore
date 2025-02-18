@@ -13,6 +13,9 @@ backend/.env
 config/
 backup.sql
 bun.lockb
+my_token.txt
+
+env/
 
 embed.py
 process_documents.py
@@ -23,6 +26,9 @@ app.py
 app.py.old
 test_storage.py
 test_db.py
+
+
+node_modules/
 
 
 

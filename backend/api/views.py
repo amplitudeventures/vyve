@@ -1,6 +1,6 @@
 from django.shortcuts import render
 from django.http import JsonResponse
-
+from django.views.decorators.http import require_GET, require_http_methods, require_POST
 from django.views.decorators.http import require_GET
 # from django.views.decorators.csrf import csrf_exempt
 from .models import Phase, SubPhase, AnalysisResult
@@ -8,7 +8,9 @@ import os
 # Create your views here.
 from django.http import HttpResponse
 from .utils.pinecone_handler import PineconeHandler
-
+import logging
+from .utils.langchain_processor import LangChainProcessor
+logger = logging.getLogger(__name__)
 
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 PINECONE_API_KEY = os.getenv("PINECONE_API_KEY")
@@ -16,10 +18,88 @@ PINECONE_ENVIRONMENT = os.getenv("PINECONE_ENVIRONMENT")
 PINECONE_INDEX_NAME = os.getenv("PINECONE_INDEX_NAME")
 
 pinecone_handler = PineconeHandler(PINECONE_INDEX_NAME, PINECONE_API_KEY, PINECONE_ENVIRONMENT, OPENAI_API_KEY)
-async def start_analysis(request):
-    message = pinecone_handler.query_similar("million metric tons")
-    print(f"Message: {message}")
-    return JsonResponse({"message": str(message)})
+processor = LangChainProcessor(pinecone_handler)
+
+def get_prompt_with_dependencies(sub_phase):
+    dependencies = sub_phase.dependencies.all()
+    prompt = sub_phase.prompt
+    for dependency in dependencies:
+        prompt += f"\n\n{dependency.name}: {dependency.prompt}"
+    return prompt
+
+def analyse_phase(phase_id=None):
+    # FOR NOW ALWAYS USE THE FIRST PHASE
+    if not phase_id:
+            phase_id = Phase.objects.first().id
+    phase = Phase.objects.filter(name="Initial Analytics").first()
+    if not phase:
+        logger.error(f"Phase not found: {phase_id}")
+        return None
+    
+    sub_phases = SubPhase.objects.filter(parent_phase_id=phase)
+    sub_phases_without_dependencies = []
+    sub_phases_with_dependencies = []
+    for sub_phase in sub_phases:
+        # latest_result = AnalysisResult.objects.filter(sub_phase_id=sub_phase).order_by('-created_at').first()
+        
+        # TEMPORARY: REMEMBER TO REMOVE THIS
+        AnalysisResult.objects.filter(sub_phase_id=sub_phase).delete()
+
+        latest_result = None
+        if not latest_result and not sub_phase.dependencies.exists():
+            sub_phases_without_dependencies.append(sub_phase)
+        elif not latest_result and sub_phase.dependencies.exists():
+            sub_phases_with_dependencies.append(sub_phase)
+    print(f'length of incomplete sub phases without dependencies: {len(sub_phases_without_dependencies)}')
+    print(f'length of sub phases with dependencies: {len(sub_phases_with_dependencies)}')
+    print("--------------------------------")
+
+    for sub_phase in sub_phases_without_dependencies:
+        analysis_result = processor.analyze_phase(sub_phase.prompt)
+        if analysis_result:
+            print(f"Analysis result for {sub_phase.name}: {analysis_result[:100]}")
+
+            # delete all previous analysis results for this sub phase
+            AnalysisResult.objects.filter(sub_phase_id=sub_phase).delete()
+
+            AnalysisResult.objects.create(
+                sub_phase_id=sub_phase,
+                status='completed',
+                result=analysis_result
+            )
+        else:
+            print(f"No analysis result for {sub_phase.name}")
+            
+    for sub_phase in sub_phases_with_dependencies:
+        prompt = get_prompt_with_dependencies(sub_phase)
+        print(f"Prompt for {sub_phase.name}: {prompt}\n\n")
+        # delete all previous analysis results for this sub phase
+        AnalysisResult.objects.filter(sub_phase_id=sub_phase).delete()
+        analysis_result = processor.analyze_phase(prompt)
+        if analysis_result:
+            print(f"Analysis result for {sub_phase.name}: {analysis_result[:100]}")
+            AnalysisResult.objects.create(
+                sub_phase_id=sub_phase,
+                status='completed',
+                result=analysis_result
+            )
+        else:
+            print(f"No analysis result for {sub_phase.name}")
+    
+    
+
+
+
+
+@require_POST
+def start_analysis(request):
+    try:
+        analyse_phase()
+        return JsonResponse({"message": "Started analysis"})
+    except Exception as e:
+        print(f"Error: {e}")
+        return JsonResponse({"error": str(e)}, status=500)
+
 
 
 @require_GET
