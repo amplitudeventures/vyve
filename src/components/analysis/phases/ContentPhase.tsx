@@ -46,7 +46,7 @@ interface ContentPhaseProps {
   onStart: (model: string) => void;
 }
 function ContentPhase({ phaseData, onStart }: ContentPhaseProps) {
-  console.log("phasedata: " ,phaseData);
+  console.log("phasedata: ", phaseData);
   const currentPhase = phaseData;
   const { phase, displayName, description, status, result, prompt } = currentPhase;
   const [selectedModel, setSelectedModel] = useState('');
@@ -160,6 +160,41 @@ function ContentPhase({ phaseData, onStart }: ContentPhaseProps) {
             </div>
           )}
           {renderPromptContent()}
+
+          {status === 'completed' && result && (
+            <div className="space-y-6">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500/10 via-purple-500/10 to-pink-500/10 flex items-center justify-center">
+                    <FileText className="h-4 w-4 text-blue-400/80" />
+                  </div>
+                  <h3 className="text-lg font-semibold bg-clip-text text-transparent bg-gradient-to-r from-blue-400/80 via-purple-400/80 to-pink-400/80">
+                    Analysis Results
+                  </h3>
+                </div>
+                <div className="flex items-center gap-4">
+                  <Button
+                    onClick={() => onStart(selectedModel)}
+                    className="button-glow-subtle bg-gradient-to-r from-blue-500/80 via-purple-500/80 to-pink-500/80 hover:from-blue-600/80 hover:via-purple-600/80 hover:to-pink-600/80 text-white shadow-lg group"
+                  >
+                    <RefreshCw className="h-4 w-4 mr-2 transition-transform group-hover:rotate-180" />
+                    Rerun Analysis
+                  </Button>
+                </div>
+              </div>
+              <Card className="glass-subtle">
+                <CardContent className="p-6">
+                  <ScrollArea className="h-[300px] overflow-y-auto pr-4" type="always">
+                    <div className="space-y-6">
+                      <div className="prose prose-invert max-w-none">
+                        <div className="whitespace-pre-wrap text-white/80">{result}</div>
+                      </div>
+                    </div>
+                  </ScrollArea>
+                </CardContent>
+              </Card>
+            </div>
+          )}
         </CardContent>
       </Card>
     )
