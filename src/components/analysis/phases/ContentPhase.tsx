@@ -3,7 +3,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { PlayCircle, Sparkles } from 'lucide-react';
+import { FileText, PlayCircle, RefreshCw, Sparkles } from 'lucide-react';
 import React, { useState } from 'react'
 
 interface PhaseData {
