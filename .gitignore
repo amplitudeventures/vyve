@@ -5,6 +5,10 @@ scripts/
 supabase/
 pathces/
 .env
+.env.denominator
+.env.vyve
+venv/
+node_modules/
 backend/.env
 config/
 backup.sql
