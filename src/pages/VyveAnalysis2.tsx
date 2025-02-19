@@ -12,16 +12,50 @@ const handleRestart = () => console.log("Reset All Data clicked");
 const dummy = {
   "phases": [
     {
+      "name": "phase name 1",
       "id": 1,
-      "name": "Phase 1",
-      "description": "Initial document analysis",
-      "status": "Active"
+      "subphases": {
+        "subphase1": {
+          "name": "sub phase name",
+          "analysis_result": "RESULT",
+          "status": "completed",
+          "id": 1
+        }, "subphase2": {
+          "name": "sub phase name",
+          "analysis_result": "",
+          "status": "pending",
+          "id": 2
+        }, "subphase3": {
+          "name": "sub phase name",
+          "analysis_result": "",
+          "status": "error",
+          "id": 3
+        }
+      },
     },
     {
-      "id": 2,
-      "name": "Phase 2",
-      "description": "Deep processing",
-      "status": "Pending"
+      "name": "phase name 2",
+      "id": 1,
+      "subphases": {
+        "subphase1": {
+          "name": "sub phase name",
+          "analysis_result": "RESULT",
+          "status": "completed",
+          "id": 1
+        },
+        "subphase2": {
+          "name": "sub phase name",
+          "analysis_result": "",
+          "status": "pending",
+          "id": 2
+        },
+        "subphase3": {
+          "name": "sub phase name",
+          "analysis_result": "",
+          "status": "error",
+          "id": 3
+        }
+      }
     }
   ],
   "phase_prompts": [
@@ -75,9 +109,34 @@ OUTPUT FORMAT:
 
 const VyveAnalysis = ({ error }) => {
 
+  const getStatus = (currPhase, data, currSub) => {
+    const phaseData = Object.values(data)[currPhase];
+    const subPhase = Object.values(phaseData)[currSub];
+    return {
+      "status": subPhase["status"],
+      "subPhaseName": subPhase["name"], 
+      "results": subPhase["analysis_results"]
+    };
+  }
+  const getPhaseName = (currPhase, data) => {
+    const phaseData = Object.values(data)[currPhase];
+    return phaseData["name"];
+  }
+
   const renderPhaseContent = () => {
-    console.log("Rendering phase content", dummy["phase_prompts"][0]["text"]);
-    return (<ContentPhase phaseData={{ phase: 0, displayName: "Phase 0", description: dummy["phase_prompts"][0]["text"], status: "pending", prompt: dummy["phase_prompts"][0]["text"] }} onStart={() => { }} />);
+    return (
+      <ContentPhase
+        phaseData={{
+          phase: currentPhase,
+          subphase: currentSubPhase,
+          displayName: dummy["phases"][currentPhase]["name"],
+          description: "description",
+          status: Object.values(dummy["phases"][currentPhase]["subphases"])[currentSubPhase]["status"]
+          ,
+          prompt: "Prompt",
+          result: Object.values(dummy["phases"][currentPhase]["subphases"])[currentSubPhase]["analysis_result"]
+        }}
+        onStart={() => { }} />);
   }
   const [currentPhase, setCurrentPhase] = useState(0);
   const [currentSubPhase, setCurrentSubPhase] = useState(0);
