@@ -8,8 +8,40 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { useState, useEffect } from "react";
-import { PhasePrompt } from "@/types/vyve";
-import { supabase } from "@/integrations/supabase/client";
+import axios from "axios";
+
+interface SubPhase {
+  id: number;
+  name: string;
+  analysis_result: string;
+  status: "completed" | "pending" | "error";
+}
+
+interface Phase {
+  id: number;
+  name: string;
+  subphases: {
+    [key: string]: SubPhase;
+  };
+}
+
+interface PhaseResponse {
+  phases: {
+    [key: string]: Phase;
+  };
+}
+
+interface PhasePrompt {
+  id: number;
+  name: string;
+  phase_index: number;
+  prompt: string;
+  sub_phase?: {
+    id: number;
+    name: string;
+    description: string;
+  };
+}
 
 interface PhaseNavigationProps {
   currentPhase: number;
@@ -19,44 +51,34 @@ interface PhaseNavigationProps {
 
 export function PhaseNavigation({ currentPhase, currentSubPhase = 0, onPhaseChange }: PhaseNavigationProps) {
   const [activeCategory, setActiveCategory] = useState<string>("Initial Analytics");
-  const [phasePrompts, setPhasePrompts] = useState<PhasePrompt[]>([]);
+  const [phases, setPhases] = useState<PhaseResponse | null>(null);
   const [expandedPhase, setExpandedPhase] = useState<number | null>(null);
 
   // Fetch phase prompts when component mounts
   useEffect(() => {
-    const fetchPhasePrompts = async () => {
+    const fetchPhases = async () => {
       try {
-        const { data, error } = await supabase
-          .from('phase_prompts')
-          .select('*')
-          .order('phase_number')
-          .order('sub_phase');
-        
-        if (error) {
-          console.error('Error fetching phase prompts:', error);
-          return;
-        }
-
-        if (data) {
-          console.log('Fetched phase prompts:', data);
-          setPhasePrompts(data);
+        const response = await axios.get('/api/get_phases/');
+        if (response.data) {
+          setPhases(response.data);
         }
       } catch (err) {
-        console.error('Error in fetchPhasePrompts:', err);
+        console.error('Error fetching phases:', err);
       }
     };
 
-    fetchPhasePrompts();
-  }, []); // Empty dependency array to run only once on mount
+    fetchPhases();
+  }, []);
+
+  // Helper function to get subphases for a phase
+  const getSubPhases = (phaseId: number) => {
+    if (!phases) return [];
+    const phase = Object.values(phases.phases).find(p => p.id === phaseId);
+    return phase ? Object.values(phase.subphases) : [];
+  };
 
   // Group prompts by phase number
-  const promptsByPhase = phasePrompts.reduce((acc, prompt) => {
-    if (!acc[prompt.phase_number]) {
-      acc[prompt.phase_number] = [];
-    }
-    acc[prompt.phase_number].push(prompt);
-    return acc;
-  }, {} as Record<number, PhasePrompt[]>);
+  const promptsByPhase = phases?.phases[activeCategory]?.subphases ? Object.entries(phases.phases[activeCategory].subphases) : [];
 
   return (
     <div className="space-y-8">
@@ -122,7 +144,8 @@ export function PhaseNavigation({ currentPhase, currentSubPhase = 0, onPhaseChan
             <div className="grid grid-cols-2 gap-4">
               <TooltipProvider>
                 {PHASE_CATEGORIES["Production"][activeCategory].map(phase => {
-                  const hasSubPhases = promptsByPhase[phase]?.length > 1;
+                  const subPhases = getSubPhases(phase);
+                  const hasSubPhases = subPhases.length > 1;
                   const isExpanded = expandedPhase === phase;
                   
                   return (
@@ -175,28 +198,34 @@ export function PhaseNavigation({ currentPhase, currentSubPhase = 0, onPhaseChan
                       {/* Sub-phases */}
                       {hasSubPhases && isExpanded && (
                         <div className="pl-4 space-y-2">
-                          {promptsByPhase[phase].map((prompt, index) => (
+                          {subPhases.map((subPhase) => (
                             <Button
-                              key={prompt.id}
-                              onClick={() => onPhaseChange(phase, prompt.sub_phase)}
+                              key={subPhase.id}
+                              onClick={() => onPhaseChange(phase, subPhase.id)}
                               variant="outline"
                               className={cn(
                                 "w-full relative group/subphase overflow-hidden",
                                 "h-auto py-3 px-4 border-0",
                                 "bg-background/20 hover:bg-background/30",
                                 "transition-all duration-500",
-                                (currentPhase === phase && currentSubPhase === prompt.sub_phase) && [
+                                (currentPhase === phase && currentSubPhase === subPhase.id) && [
                                   "shadow-[0_0_20px_-5px_rgba(168,85,247,0.2)]",
                                   "bg-gradient-to-r from-blue-500/5 via-purple-500/5 to-pink-500/5"
-                                ]
+                                ],
+                                subPhase.status === "error" && "border-red-500/50",
+                                subPhase.status === "completed" && "border-green-500/50"
                               )}
                             >
                               <div className="relative z-10">
                                 <div className={cn(
                                   "text-sm font-medium transition-colors duration-300",
-                                  (currentPhase === phase && currentSubPhase === prompt.sub_phase) && "bg-clip-text text-transparent bg-gradient-to-r from-blue-400/80 via-purple-400/80 to-pink-400/80"
+                                  (currentPhase === phase && currentSubPhase === subPhase.id) && 
+                                  "bg-clip-text text-transparent bg-gradient-to-r from-blue-400/80 via-purple-400/80 to-pink-400/80"
                                 )}>
-                                  {prompt.phase_name}
+                                  {subPhase.name}
+                                </div>
+                                <div className="text-xs text-white/40 mt-1">
+                                  {subPhase.status}
                                 </div>
                               </div>
                             </Button>
