@@ -17,8 +17,8 @@ PINECONE_API_KEY = os.getenv("PINECONE_API_KEY")
 PINECONE_ENVIRONMENT = os.getenv("PINECONE_ENVIRONMENT")
 PINECONE_INDEX_NAME = os.getenv("PINECONE_INDEX_NAME")
 
-pinecone_handler = PineconeHandler(PINECONE_INDEX_NAME, PINECONE_API_KEY, PINECONE_ENVIRONMENT, OPENAI_API_KEY)
-processor = LangChainProcessor(pinecone_handler)
+# pinecone_handler = PineconeHandler(PINECONE_INDEX_NAME, PINECONE_API_KEY, PINECONE_ENVIRONMENT, OPENAI_API_KEY)
+# processor = LangChainProcessor(pinecone_handler)
 
 def get_prompt_with_dependencies(sub_phase):
     dependencies = sub_phase.dependencies.all()
@@ -86,21 +86,47 @@ def analyse_phase(phase_id=None):
         else:
             print(f"No analysis result for {sub_phase.name}")
     
-    
-
-
-
 
 @require_POST
 def start_analysis(request):
     try:
-        analyse_phase()
-        return JsonResponse({"message": "Started analysis"})
+        phase_ids = [phase.id for phase in Phase.objects.all()]
+        for id in phase_ids:
+            analyse_phase(id)
+        return JsonResponse({"message": phase_ids})
     except Exception as e:
         print(f"Error: {e}")
         return JsonResponse({"error": str(e)}, status=500)
 
 
+@require_GET
+def get_phases(request):
+    try:
+        data = {}
+        phases = Phase.objects.all()
+        for phase in phases:
+            phase_info = {
+                    "sub_phases":{}
+                    }
+            sub_phases = phase.subphase_set.all()
+            
+            for sub_phase in sub_phases:
+                analysis_inst = sub_phase.analysisresult_set.first()
+                result = analysis_inst.result if analysis_inst else ""
+                status = analysis_inst.status if analysis_inst else ""
+                print(f'{sub_phase.name}\' result: {analysis_inst.result[:10]}') if result else print(f"{sub_phase.name} has not results!!!")
+                sub_phase_info = {
+                    f"{sub_phase.name}":{
+                        "analysis_result": result,
+                        'status': status
+                        }
+                    }
+                phase_info['sub_phases'][sub_phase.name] = sub_phase_info
+            data[f'{phase.name}'] = phase_info
+        return JsonResponse({"Message": data})   
+    except Exception as err:
+        logger.error(err)
+        JsonResponse("error": f"/get_phases : {err}")
 
 @require_GET
 def get_analysis_status(request):
