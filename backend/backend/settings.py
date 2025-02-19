@@ -13,8 +13,26 @@ https://docs.djangoproject.com/en/5.1/ref/settings/
 from pathlib import Path
 from dotenv import load_dotenv
 import os
+import environ
+# env = environ.Env()
+# environ.Env.read_env()  # Load environment variables from .env file
+env = environ.Env()
+environ.Env.read_env(os.path.join(os.path.dirname(__file__), '../.env'))  # Ensure correct path
 
+# Use direct connection when running migrations
+# USE_DIRECT_DB = os.environ.get("USE_DIRECT_DB", "False").lower() == "true"
+
+
+
+# print(f'Database info: {env.db()}')
 load_dotenv()
+
+# 
+
+# db_cred = os.getenv("DATABASE_CRED")  
+
+
+# print(db_cred)
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -87,23 +105,19 @@ WSGI_APPLICATION = 'backend.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/5.1/ref/settings/#databases
 
-# DATABASES = {
-#     'default': {
-#         'ENGINE': 'django.db.backends.postgresql',
-#         'NAME': 'postgres',
-#         'USER': 'postgres',
-#         'PASSWORD': 'postgres',
-#         'HOST': 'offhwhngqeoperpdesvc.supabase.co',
-#         'PORT': '5432',
-#     }
-# }
 
 DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',  # Creates a SQLite file in your project directory
-    }
+    # 'default': env.db('DIRECT_URL' if USE_DIRECT_DB else 'DATABASE_URL')
+    # 'default': env.db('DIRECT_URL')
+    'default': env.db('DATABASE_URL')
+
 }
+# DATABASES = {
+#     'default': {
+#         'ENGINE': 'django.db.backends.sqlite3',
+#         'NAME': BASE_DIR / 'db.sqlite3',  # Creates a SQLite file in your project directory
+#     }
+# }
 
 # Password validation
 # https://docs.djangoproject.com/en/5.1/ref/settings/#auth-password-validators

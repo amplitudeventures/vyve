@@ -7,6 +7,7 @@ class Phase(models.Model):
     name = models.CharField(max_length=255)
     description = models.TextField(null=True, blank=True)
     status = models.CharField(max_length=255, null=True, blank=True)
+    order = models.IntegerField(null=False, default=0)
 
     def __str__(self):
         return self.name
@@ -21,9 +22,8 @@ class SubPhase(models.Model):
     # description = models.TextField()
     parent_phase_id = models.ForeignKey(Phase, on_delete=models.CASCADE, null=True, blank=True)
     # prompt_id = models.ForeignKey(Prompt, on_delete=models.CASCADE)
-    dependencies = models.ManyToManyField('self', symmetrical=False, blank=True, null=True)
+    takesSummaries = models.BooleanField(default=True)
     prompt = models.TextField()
-
 
     def __str__(self):
         return self.name

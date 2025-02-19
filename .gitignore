@@ -10,6 +10,7 @@ pathces/
 venv/
 node_modules/
 backend/.env
+backend/db.sqlite3
 config/
 backup.sql
 bun.lockb
