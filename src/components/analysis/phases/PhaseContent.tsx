@@ -1,4 +1,4 @@
-// import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Loader2, PlayCircle, FileText, CheckCircle, AlertCircle, Code, Sparkles, MessageSquare, RefreshCw } from "lucide-react";
 import { PhaseConfig, PhasePrompt, AnalysisResult } from "@/types/vyve";
@@ -7,11 +7,11 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useState, useEffect } from "react";
-import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "@/components/ui/use-toast";
 import { Progress } from "@/components/ui/progress";
+import axios from "axios";
 
 interface PhaseContentProps {
   phaseData: PhaseConfig;
@@ -187,12 +187,11 @@ export function PhaseContent({ phaseData, onStart, onUpdate }: PhaseContentProps
   // Simplify the parsedPrompt logic
   const parsedPrompt = prompt?.prompt ? parsePrompt(prompt.prompt) : null;
 
-  // Only poll for updates when status is in_progress
+  // Replace the Supabase polling code with Django API call
   useEffect(() => {
     let pollInterval: NodeJS.Timeout;
     let isPolling = false;
     
-    // Only start polling if status is explicitly in_progress and we have a valid phase
     if (status === 'in_progress' && currentPhaseData.phase >= 0 && currentPhaseData.result?.metadata?.status === 'in_progress') {
       console.log('Starting polling for phase:', {
         phase: currentPhaseData.phase,
@@ -209,57 +208,44 @@ export function PhaseContent({ phaseData, onStart, onUpdate }: PhaseContentProps
         try {
           isPolling = true;
           
-          const { data, error } = await supabase
-            .from('analysis_results')
-            .select('*')
-            .eq('phase_number', currentPhaseData.phase)
-            .order('created_at', { ascending: false })
-            .limit(1);
+          const response = await axios.get(`/api/get_analysis_status/?phase_id=${currentPhaseData.phase}`);
           
-          if (error) {
-            console.error('Error polling for updates:', error);
-            return;
-          }
+          if (response.data) {
+            const latestResult = response.data;
+            
+            // Only update if the status has changed
+            if (latestResult.status !== status) {
+              console.log('Status changed:', { 
+                phase: currentPhaseData.phase,
+                from: status, 
+                to: latestResult.status,
+                hasContent: !!latestResult.result
+              });
 
-          const latestResult = data?.[0];
-          if (!latestResult) {
-            console.log('No results found for phase:', currentPhaseData.phase);
-            return;
-          }
-
-          // Only update if the status has changed
-          if (latestResult.metadata?.status !== status) {
-            console.log('Status changed:', { 
-              phase: currentPhaseData.phase,
-              from: status, 
-              to: latestResult.metadata?.status,
-              hasContent: !!latestResult.content
-            });
-
-            // Update phase data with current progress
-            const updatedPhaseData = {
-              ...currentPhaseData,
-              status: latestResult.metadata?.status === 'completed' ? 'completed' as const : 'in_progress' as const,
-              result: {
-                phase_number: latestResult.phase_number,
-                content: latestResult.content || '',
-                created_at: latestResult.created_at,
-                metadata: {
-                  ...latestResult.metadata,
-                  lastUpdate: new Date().toISOString()
+              // Update phase data with current progress
+              const updatedPhaseData = {
+                ...currentPhaseData,
+                status: latestResult.status === 'completed' ? 'completed' as const : 'in_progress' as const,
+                result: {
+                  phase_number: currentPhaseData.phase,
+                  content: latestResult.result || '',
+                  created_at: new Date().toISOString(),
+                  metadata: {
+                    status: latestResult.status,
+                    lastUpdate: new Date().toISOString()
+                  }
                 }
-              }
-            };
+              };
 
-            onUpdate?.(updatedPhaseData);
+              onUpdate?.(updatedPhaseData);
+            }
+
+            // Clear interval if complete or error
+            if (latestResult.status === 'completed' || latestResult.status === 'error') {
+              console.log('Stopping polling for phase:', currentPhaseData.phase);
+              clearInterval(pollInterval);
+            }
           }
-
-          // Clear interval if complete or error
-          if (latestResult.metadata?.status === 'completed' || latestResult.metadata?.status === 'error') {
-            console.log('Stopping polling for phase:', currentPhaseData.phase, 'due to status:', latestResult.metadata?.status);
-            clearInterval(pollInterval);
-          }
-
         } catch (err) {
           console.error('Error polling for updates:', err);
         } finally {
@@ -267,20 +253,11 @@ export function PhaseContent({ phaseData, onStart, onUpdate }: PhaseContentProps
         }
       }, 1000);
 
-      // Cleanup function
       return () => {
         if (pollInterval) {
-          console.log('Cleaning up polling interval for phase:', currentPhaseData.phase);
           clearInterval(pollInterval);
         }
       };
-    } else {
-      console.log('Not starting polling:', {
-        phase: currentPhaseData.phase,
-        status,
-        hasResult: !!currentPhaseData.result,
-        resultStatus: currentPhaseData.result?.metadata?.status
-      });
     }
   }, [status, currentPhaseData, onUpdate]);
 
