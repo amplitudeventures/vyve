@@ -20,15 +20,22 @@ PINECONE_INDEX_NAME = os.getenv("PINECONE_INDEX_NAME")
 pinecone_handler = PineconeHandler(PINECONE_INDEX_NAME, PINECONE_API_KEY, PINECONE_ENVIRONMENT, OPENAI_API_KEY)
 processor = LangChainProcessor(pinecone_handler)
 
-def get_prompt_with_dependencies(prompt: str, phase: Phase):
+def get_prompt_with_dependencies(current_phase_prompt: str, phase: Phase):
     completed_results = AnalysisResult.objects.filter(status='completed')
     # Make sure we only include the completed sub phases that are before the current phase
     completed_sub_phases = [result.sub_phase_id for result in completed_results if result.sub_phase_id.parent_phase_id.order <= phase.order]
-    prompt = ""
+    prompt = f"""
+        Prompt: {current_phase_prompt}
+
+        {'-' * 40}
+        Here are the results of the completed phases so far:
+    """
     for sub_phase in completed_sub_phases:
         result = AnalysisResult.objects.filter(sub_phase_id=sub_phase, status='completed').first()
         if result:
             prompt += f"\n\n{sub_phase.name}: {result.result}"
+
+    logger.info(f"Prompt with dependencies: \n\n{prompt}\n\n")
     return prompt
 
 def reset_phases():
@@ -43,9 +50,9 @@ def reset_phases():
     AnalysisResult.objects.all().delete()
 
 
-status = ['idle', 'in_progress', 'completed']
+status = ['idle', 'in_progress', 'completed', 'incomplete']
 
-def analyse_phase(phase):
+def analyse_phase(phase, request):
     """
     Analyses a phase and all its sub phases
     """
@@ -60,7 +67,7 @@ def analyse_phase(phase):
         sub_phases = SubPhase.objects.filter(parent_phase_id=phase)
         sub_phases_without_dependencies = []
         sub_phases_with_dependencies = []
-        for sub_phase in sub_phases[:2]:
+        for sub_phase in sub_phases:
             # latest_result = AnalysisResult.objects.filter(sub_phase_id=sub_phase).order_by('-created_at').first()
             
             # TEMPORARY: REMEMBER TO REMOVE THIS
@@ -75,9 +82,16 @@ def analyse_phase(phase):
         logger.info(f'\tlength of sub phases with dependencies: {len(sub_phases_with_dependencies)}')
         logger.info("-" * 100)
 
+        phase_status = 'completed'
         # Analyse the sub phases without dependencies first
         for sub_phase in sub_phases_without_dependencies:
             try:
+                if request.session['stopAnalysis']:
+                    logger.info(f"\t\tStopping analysis for {sub_phase.name}")
+                    phase_status = 'incomplete'
+                    break
+                
+                logger.info(f"\t\tAnalysing {sub_phase.name} | stopAnalysis: {request.session['stopAnalysis']}")
                 analysis_result = processor.analyze_phase(sub_phase.prompt)
                 if analysis_result:
                     print(f"Analysis result for {sub_phase.name}: {analysis_result[:100]}")
@@ -97,6 +111,10 @@ def analyse_phase(phase):
         # Analyse the sub phases with dependencies after
         for sub_phase in sub_phases_with_dependencies:
             try:
+                if request.session['stopAnalysis']:
+                    logger.info(f"\t\tStopping analysis for {sub_phase.name}")
+                    phase_status = 'incomplete'
+                    break
                 prompt = get_prompt_with_dependencies(sub_phase.prompt, phase)
                 # AnalysisResult.objects.filter(sub_phase_id=sub_phase).delete()
                 if not AnalysisResult.objects.filter(sub_phase_id=sub_phase).exists():
@@ -117,7 +135,7 @@ def analyse_phase(phase):
                 AnalysisResult.objects.filter(sub_phase_id=sub_phase).delete()
 
         # Set the phase to COMPLETED
-        phase.status = 'completed'
+        phase.status = phase_status
         phase.save()
 
         logger.info(f"\tPhase {phase.name} completed")
@@ -125,21 +143,47 @@ def analyse_phase(phase):
     except Exception as err:
         logger.error(f'analyse_phse(): {err}')
 
-@require_POST
+# @require_GET
 def start_analysis(request):
     """
     Starts the analysis of all phases
     """
+
+    if 'stopAnalysis' not in request.session:
+        request.session['stopAnalysis'] = False
+
     try:
         for phase in Phase.objects.all():
-            analyse_phase(phase)
+            analyse_phase(phase, request)
         return JsonResponse({"message": "Analysis started"})
     except Exception as e:
         logger.error(f"Error: {e}")
         return JsonResponse({"error": str(e)}, status=500)
 
+# @require_GET
+def stop_analysis(request):
+    """
+    Stops the analysis of all phases
+    """
+    try:
+        request.session['stopAnalysis'] = True
+        return JsonResponse({"message": "Analysis stopped"})
+    except Exception as e:
+        logger.error(f"Error: {e}")
+        return JsonResponse({"error": str(e)}, status=500)
 
-@require_GET
+def reset_analysis(request):
+    """
+    Resets the analysis of all phases
+    """
+    try:
+        reset_phases()
+        return JsonResponse({"message": "Analysis reset"})
+    except Exception as e:
+        logger.error(f"Error: {e}")
+        return JsonResponse({"error": str(e)}, status=500)
+
+# @require_GET
 def get_phases(request):
     try:
         # print(f'session: {request.session.session_key}')
@@ -170,7 +214,7 @@ def get_phases(request):
         logger.error(err)
         JsonResponse({"error": f"/get_phases : {err}"})
 
-@require_GET
+# @require_GET
 def get_analysis_status(request):
     # return JsonResponse({"message": "Analysis status"})
     
