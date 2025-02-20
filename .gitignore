@@ -19,10 +19,10 @@ my_token.txt
 env/
 
 embed.py
-process_documents.py
-langchain_processor.py
 document_utils.py
-pinecone_handler.py
+/langchain_processor.py
+/pinecone_handler.py
+/process_documents.py
 app.py
 app.py.old
 test_storage.py
