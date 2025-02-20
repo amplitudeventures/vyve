@@ -1,11 +1,11 @@
 import { useEffect, useState } from 'react';
-import { supabase } from "@/integrations/supabase/client";
+//import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { FileIcon } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 import { WebsiteSelector } from './documents/WebsiteSelector';
 import { SearchDocumentsDialog } from './documents/SearchDocumentsDialog';
-import { EmbeddingService } from '@/services/embeddingService';
+//import { EmbeddingService } from '@/services/embeddingService';
 import { Document, StorageDocument } from '@/types/documents';
 import { DocumentActions } from './documents/DocumentActions';
 import { DocumentsTable } from './documents/DocumentsTable';
@@ -35,65 +35,65 @@ const DocumentList = ({ selectedCompanyName, companyNames }) => {
   } | null>(null);
 
   const refreshLatestContent = async () => {
-    try {
-      await supabase.rpc('refresh_latest_website_content');
-    } catch (error) {
-      console.error('Error refreshing latest content:', error);
-    }
+    //try {
+    //  await supabase.rpc('refresh_latest_website_content');
+    //} catch (error) {
+    //  console.error('Error refreshing latest content:', error);
+    //}
   };
 
   const addStorageDocument = async (doc: Document) => {
-    try {
-      if (!selectedCompanyName) {
-        toast({
-          title: "Error",
-          description: "Please select a company first",
-          variant: "destructive",
-        });
-        return;
-      }
-
-      // Get company ID from Supabase directly
-      const { data: companyData, error: companyError } = await supabase
-        .from('companies_test')
-        .select('id')
-        .eq('name', selectedCompanyName)
-        .single();
-
-      if (companyError || !companyData) {
-        toast({
-          title: "Error",
-          description: "Selected company not found",
-          variant: "destructive",
-        });
-        return;
-      }
-
-      // Update document's company_id
-      const { error: updateError } = await supabase
-        .from('documents')
-        .update({ company_id: companyData.id })
-        .eq('id', doc.id);
-
-      if (updateError) {
-        throw updateError;
-      }
-
-      toast({
-        title: "Success",
-        description: "Document selected successfully",
-      });
-
-      setOpenSearch(false);
-      fetchDocuments();
-    } catch (error) {
-      console.error('Error selecting document:', error);
-      toast({
-        title: "Error",
-        description: "Failed to select document",
-        variant: "destructive",
-      });
-    }
+    //try {
+    //  if (!selectedCompanyName) {
+    //    toast({
+    //      title: "Error",
+    //      description: "Please select a company first",
+    //      variant: "destructive",
+    //    });
+    //    return;
+    //  }
+    //
+    //  // Get company ID from Supabase directly
+    //  const { data: companyData, error: companyError } = await supabase
+    //    .from('companies_test')
+    //    .select('id')
+    //    .eq('name', selectedCompanyName)
+    //    .single();
+    //
+    //  if (companyError || !companyData) {
+    //    toast({
+    //      title: "Error",
+    //      description: "Selected company not found",
+    //      variant: "destructive",
+    //    });
+    //    return;
+    //  }
+    //
+    //  // Update document's company_id
+    //  const { error: updateError } = await supabase
+    //    .from('documents')
+    //    .update({ company_id: companyData.id })
+    //    .eq('id', doc.id);
+    //
+    //  if (updateError) {
+    //    throw updateError;
+    //  }
+    //
+    //  toast({
+    //    title: "Success",
+    //    description: "Document selected successfully",
+    //  });
+    //
+    //  setOpenSearch(false);
+    //  fetchDocuments();
+    //} catch (error) {
+    //  console.error('Error selecting document:', error);
+    //  toast({
+    //    title: "Error",
+    //    description: "Failed to select document",
+    //    variant: "destructive",
+    //  });
+    //}
   };
 
   const fetchDocuments = async () => {
@@ -130,53 +130,53 @@ const DocumentList = ({ selectedCompanyName, companyNames }) => {
   };
 
   const addToDocuments = async (website: WebsiteContent) => {
-    try {
-      console.log('Adding website to documents:', website);
-
-      const { data: existingDoc } = await supabase
-        .from('documents')
-        .select('id')
-        .eq('url', website.url)
-        .single();
-
-      if (existingDoc) {
-        toast({
-          title: "Info",
-          description: "This website is already in your documents",
-        });
-        setOpenWebsite(false);
-        return;
-      }
-
-      const { error } = await supabase
-        .from('documents')
-        .insert({
-          filename: website.title || website.url,
-          file_path: website.url,
-          content_type: 'website',
-          size: 0,
-          url: website.url,
-          is_website: true,
-          should_process: true
-        });
-
-      if (error) throw error;
-
-      toast({
-        title: "Success",
-        description: "Website added to documents",
-      });
-
-      setOpenWebsite(false);
-      fetchDocuments();
-    } catch (error) {
-      console.error('Error adding website to documents:', error);
-      toast({
-        title: "Error",
-        description: "Failed to add website to documents",
-        variant: "destructive",
-      });
-    }
+    //try {
+    //  console.log('Adding website to documents:', website);
+    //
+    //  const { data: existingDoc } = await supabase
+    //    .from('documents')
+    //    .select('id')
+    //    .eq('url', website.url)
+    //    .single();
+    //
+    //  if (existingDoc) {
+    //    toast({
+    //      title: "Info",
+    //      description: "This website is already in your documents",
+    //    });
+    //    setOpenWebsite(false);
+    //    return;
+    //  }
+    //
+    //  const { error } = await supabase
+    //    .from('documents')
+    //    .insert({
+    //      filename: website.title || website.url,
+    //      file_path: website.url,
+    //      content_type: 'website',
+    //      size: 0,
+    //      url: website.url,
+    //      is_website: true,
+    //      should_process: true
+    //    });
+    //
+    //  if (error) throw error;
+    //
+    //  toast({
+    //    title: "Success",
+    //    description: "Website added to documents",
+    //  });
+    //
+    //  setOpenWebsite(false);
+    //  fetchDocuments();
+    //} catch (error) {
+    //  console.error('Error adding website to documents:', error);
+    //  toast({
+    //    title: "Error",
+    //    description: "Failed to add website to documents",
+    //    variant: "destructive",
+    //  });
+    //}
   };
 
   const toggleFromQueue = (doc: Document) => {
@@ -189,48 +189,48 @@ const DocumentList = ({ selectedCompanyName, companyNames }) => {
     }
   }
 
-  const removeDocument = async (doc: Document) => {
-    try {
-      console.log('Toggling document processing status, ID:', doc.id);
-
-      // Call the stored procedure to toggle status
-      const { error: updateError } = await supabase
-        .rpc('toggle_document_should_process', {
-          document_id: doc.id
-        });
-
-      if (updateError) {
-        console.error('Error updating document:', updateError);
-        throw updateError;
-      }
-
-      // Get the updated document to ensure we have the correct state
-      const { data: updatedDoc, error: fetchError } = await supabase
-        .from('documents')
-        .select('should_process')
-        .eq('id', doc.id)
-        .single();
-
-      if (fetchError) throw fetchError;
-
-      // Update the document in local state with the actual database value
-      setDocuments(prevDocuments => prevDocuments.map(d =>
-        d.id === doc.id ? { ...d, should_process: updatedDoc.should_process } : d
-      ));
-
-      toast({
-        title: "Success",
-        description: updatedDoc.should_process ? "Document added to processing queue" : "Document removed from processing queue",
-      });
-    } catch (error) {
-      console.error('Error updating document:', error);
-      toast({
-        title: "Error",
-        description: error instanceof Error ? error.message : "Failed to update document",
-        variant: "destructive",
-      });
-    }
-  };
+  //const removeDocument = async (doc: Document) => {
+  //  try {
+  //    console.log('Toggling document processing status, ID:', doc.id);
+  //
+  //    // Call the stored procedure to toggle status
+  //    const { error: updateError } = await supabase
+  //      .rpc('toggle_document_should_process', {
+  //        document_id: doc.id
+  //      });
+  //
+  //    if (updateError) {
+  //      console.error('Error updating document:', updateError);
+  //      throw updateError;
+  //    }
+  //
+  //    // Get the updated document to ensure we have the correct state
+  //    const { data: updatedDoc, error: fetchError } = await supabase
+  //      .from('documents')
+  //      .select('should_process')
+  //      .eq('id', doc.id)
+  //      .single();
+  //
+  //    if (fetchError) throw fetchError;
+  //
+  //    // Update the document in local state with the actual database value
+  //    setDocuments(prevDocuments => prevDocuments.map(d =>
+  //      d.id === doc.id ? { ...d, should_process: updatedDoc.should_process } : d
+  //    ));
+  //
+  //    toast({
+  //      title: "Success",
+  //      description: updatedDoc.should_process ? "Document added to processing queue" : "Document removed from processing queue",
+  //    });
+  //  } catch (error) {
+  //    console.error('Error updating document:', error);
+  //    toast({
+  //      title: "Error",
+  //      description: error instanceof Error ? error.message : "Failed to update document",
+  //      variant: "destructive",
+  //    });
+  //  }
+  //};
 
   const handleGenerateEmbeddings = async () => {
     if (processingQuery.length === 0) {
@@ -346,26 +346,26 @@ const DocumentList = ({ selectedCompanyName, companyNames }) => {
   };
 
   const handleCancelProcessing = async () => {
-    if (processingId) {
-      try {
-        await EmbeddingService.cancelProcess(processingId);
-
-        toast({
-          title: "Processing Cancelled",
-          description: "Document processing has been cancelled",
-        });
-
-        setProcessingEmbeddings(false);
-        setProcessingId(null);
-      } catch (error) {
-        console.error('Error cancelling process:', error);
-        toast({
-          title: "Error",
-          description: "Failed to cancel processing",
-          variant: "destructive",
-        });
-      }
-    }
+    //if (processingId) {
+    //  try {
+    //    await EmbeddingService.cancelProcess(processingId);
+    //
+    //    toast({
+    //      title: "Processing Cancelled",
+    //      description: "Document processing has been cancelled",
+    //    });
+    //
+    //    setProcessingEmbeddings(false);
+    //    setProcessingId(null);
+    //  } catch (error) {
+    //    console.error('Error cancelling process:', error);
+    //    toast({
+    //      title: "Error",
+    //      description: "Failed to cancel processing",
+    //      variant: "destructive",
+    //    });
+    //  }
+    //}
   };
 
   useEffect(() => {

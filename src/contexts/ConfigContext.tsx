@@ -1,6 +1,5 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { AppConfig, AppName, ConfigContextType } from '../config/configTypes';
-import { reinitializeSupabaseClient } from '@/integrations/supabase/client';
 
 const ConfigContext = createContext<ConfigContextType | undefined>(undefined);
 
@@ -59,7 +58,6 @@ export const ConfigProvider = ({ children }: ConfigProviderProps) => {
 
     try {
       // Reinitialize the Supabase client with new configuration
-      reinitializeSupabaseClient(newSupabaseUrl, newSupabaseAnonKey);
 
       // Update the config state
       setConfig(prevConfig => ({

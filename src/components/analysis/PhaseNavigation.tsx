@@ -1,6 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { PHASE_NAMES, PHASE_CATEGORIES, PHASE_DESCRIPTIONS } from "@/config/phaseConfig";
+import { PHASE_NAMES, PHASE_CATEGORIES, PHASE_DESCRIPTIONS } from "@/config/PhaseConfig";
 import {
   Tooltip,
   TooltipContent,

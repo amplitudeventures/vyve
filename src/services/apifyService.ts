@@ -1,6 +1,5 @@
 import { WebsiteContent } from '@/types/apify';
 import { transformApifyDataToSupabase } from '@/utils/dataTransformers';
-import { supabase } from '@/integrations/supabase/client';
 
 const SUPABASE_FUNCTION_URL = import.meta.env.VITE_SUPABASE_FUNCTIONS_URL;
 const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY;
@@ -49,16 +48,17 @@ export class ApifyService {
       
       console.log('Transformed data:', transformedData);
       
-      const { data: savedData, error } = await supabase
-        .from('website_content')
-        .insert(transformedData)
-        .select()
-        .single();
-
-      if (error) {
-        console.error('Error saving to Supabase:', error);
-        return null;
-      }
+      //const { data: savedData, error } = await supabase
+      //  .from('website_content')
+      //  .insert(transformedData)
+      //  .select()
+      //  .single();
+      //
+      //if (error) {
+      //  console.error('Error saving to Supabase:', error);
+      //  return null;
+      //}
+      const savedData: WebsiteContent = null;
       console.log('Successfully saved data:', savedData);
       return savedData;
     } catch (error) {

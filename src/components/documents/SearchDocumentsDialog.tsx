@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
 import { FileIcon, Loader2 } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
 import { Document } from '@/types/documents';
 
@@ -21,25 +20,25 @@ export const SearchDocumentsDialog = ({
   const [loading, setLoading] = useState(false);
 
   const fetchDocuments = async () => {
-    setLoading(true);
-    try {
-      const { data, error } = await supabase
-        .from('documents')
-        .select('*')
-        .order('created_at', { ascending: false });
-
-      if (error) throw error;
-      setDocuments(data || []);
-    } catch (error) {
-      console.error('Error fetching documents:', error);
-      toast({
-        title: "Error",
-        description: "Failed to fetch documents",
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(false);
-    }
+    //setLoading(true);
+    //try {
+    //  const { data, error } = await supabase
+    //    .from('documents')
+    //    .select('*')
+    //    .order('created_at', { ascending: false });
+    //
+    //  if (error) throw error;
+    //  setDocuments(data || []);
+    //} catch (error) {
+    //  console.error('Error fetching documents:', error);
+    //  toast({
+    //    title: "Error",
+    //    description: "Failed to fetch documents",
+    //    variant: "destructive",
+    //  });
+    //} finally {
+    //  setLoading(false);
+    //}
   };
 
   useEffect(() => {

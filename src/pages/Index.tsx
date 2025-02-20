@@ -8,7 +8,6 @@ import { Upload, PlayCircle, MessageSquare, Trash2, Settings, Database, Loader2,
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/components/ui/use-toast";
 import { useConfig } from "@/contexts/ConfigContext";
-import { supabase } from "@/integrations/supabase/client";
 import { Separator } from "@/components/ui/separator";
 import { PasswordDialog } from "@/components/PasswordDialog";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
@@ -129,53 +128,53 @@ const Index = () => {
   };
 
   const handleClearWebsites = async () => {
-    if (!confirm('Are you sure you want to clear all websites? This will permanently delete all website content from the database.')) {
-      return;
-    }
-
-    setIsClearingWebsites(true);
-    try {
-      console.log('Attempting to clear websites...');
-
-      // Delete all websites using raw SQL
-      const { data: { rowsAffected }, error: deleteError } = await supabase.rpc('execute_sql', {
-        query: 'DELETE FROM website_content WHERE id IS NOT NULL'
-      });
-
-      if (deleteError) {
-        console.error('Error clearing websites:', {
-          code: deleteError.code,
-          message: deleteError.message,
-          details: deleteError.details,
-          hint: deleteError.hint
-        });
-        throw deleteError;
-      }
-
-      console.log(`Delete operation completed successfully. Deleted ${rowsAffected} websites.`);
-      toast({
-        title: "Success",
-        description: `Successfully cleared ${rowsAffected} websites`,
-      });
-
-      // Force refresh the website list
-      window.location.reload();
-    } catch (error: any) {
-      console.error('Error clearing websites:', {
-        code: error.code,
-        message: error.message,
-        details: error.details,
-        hint: error.hint,
-        fullError: error
-      });
-      toast({
-        title: "Error",
-        description: `Failed to clear websites: [${error.code}] ${error.message}`,
-        variant: "destructive",
-      });
-    } finally {
-      setIsClearingWebsites(false);
-    }
+    //if (!confirm('Are you sure you want to clear all websites? This will permanently delete all website content from the database.')) {
+    //  return;
+    //}
+    //
+    //setIsClearingWebsites(true);
+    //try {
+    //  console.log('Attempting to clear websites...');
+    //
+    //  // Delete all websites using raw SQL
+    //  const { data: { rowsAffected }, error: deleteError } = await supabase.rpc('execute_sql', {
+    //    query: 'DELETE FROM website_content WHERE id IS NOT NULL'
+    //  });
+    //
+    //  if (deleteError) {
+    //    console.error('Error clearing websites:', {
+    //      code: deleteError.code,
+    //      message: deleteError.message,
+    //      details: deleteError.details,
+    //      hint: deleteError.hint
+    //    });
+    //    throw deleteError;
+    //  }
+    //
+    //  console.log(`Delete operation completed successfully. Deleted ${rowsAffected} websites.`);
+    //  toast({
+    //    title: "Success",
+    //    description: `Successfully cleared ${rowsAffected} websites`,
+    //  });
+    //
+    //  // Force refresh the website list
+    //  window.location.reload();
+    //} catch (error: any) {
+    //  console.error('Error clearing websites:', {
+    //    code: error.code,
+    //    message: error.message,
+    //    details: error.details,
+    //    hint: error.hint,
+    //    fullError: error
+    //  });
+    //  toast({
+    //    title: "Error",
+    //    description: `Failed to clear websites: [${error.code}] ${error.message}`,
+    //    variant: "destructive",
+    //  });
+    //} finally {
+    //  setIsClearingWebsites(false);
+    //}
   };
 
   const handleClearIndex = async () => {
@@ -484,7 +483,7 @@ const Index = () => {
         title="Enter Vyve Analysis Password"
         onSubmit={(password) => {
           if (password === "vyve") {
-            navigate("/vyve-analysis");
+            navigate("/vyve-analysis2");
           } else {
             toast({
               title: "Access Denied",
