@@ -20,13 +20,10 @@ PINECONE_INDEX_NAME = os.getenv("PINECONE_INDEX_NAME")
 pinecone_handler = PineconeHandler(PINECONE_INDEX_NAME, PINECONE_API_KEY, PINECONE_ENVIRONMENT, OPENAI_API_KEY)
 processor = LangChainProcessor(pinecone_handler)
 
-def get_prompt_with_dependencies():
-    # dependencies = sub_phase.dependencies.all()
-    # prompt = sub_phase.prompt
-    # for dependency in dependencies:
-    #     prompt += f"\n\n{dependency.name}: {dependency.prompt}"
+def get_prompt_with_dependencies(prompt: str, phase: Phase):
     completed_results = AnalysisResult.objects.filter(status='completed')
-    completed_sub_phases = [result.sub_phase_id for result in completed_results]
+    # Make sure we only include the completed sub phases that are before the current phase
+    completed_sub_phases = [result.sub_phase_id for result in completed_results if result.sub_phase_id.parent_phase_id.order <= phase.order]
     prompt = ""
     for sub_phase in completed_sub_phases:
         result = AnalysisResult.objects.filter(sub_phase_id=sub_phase, status='completed').first()
@@ -34,16 +31,32 @@ def get_prompt_with_dependencies():
             prompt += f"\n\n{sub_phase.name}: {result.result}"
     return prompt
 
-def analyse_phase(phase_id=None):
+def reset_phases():
+    """
+    Resets the status of all phases to idle and deletes all analysis results
+    """
+    phases = Phase.objects.all()
+    for phase in phases:
+        phase.status = 'idle'
+        phase.save()
+    
+    AnalysisResult.objects.all().delete()
+
+
+status = ['idle', 'in_progress', 'completed']
+
+def analyse_phase(phase):
+    """
+    Analyses a phase and all its sub phases
+    """
     try:
-        # FOR NOW ALWAYS USE THE FIRST PHASE
-        if not phase_id:
-                phase_id = Phase.objects.first().id
-        phase = Phase.objects.filter(name="Initial Analytics").first()
         if not phase:
-            logger.error(f"Phase not found: {phase_id}")
+            logger.error(f"Phase not found: {phase.name}")
             return None
-        
+
+        # Set the phase to in IN_PROGRESS
+        phase.status = 'in_progress'
+        phase.save()
         sub_phases = SubPhase.objects.filter(parent_phase_id=phase)
         sub_phases_without_dependencies = []
         sub_phases_with_dependencies = []
@@ -58,54 +71,69 @@ def analyse_phase(phase_id=None):
                 sub_phases_without_dependencies.append(sub_phase)
             elif not latest_result and takesSummaries:
                 sub_phases_with_dependencies.append(sub_phase)
-        print(f'length of incomplete sub phases without dependencies: {len(sub_phases_without_dependencies)}')
-        print(f'length of sub phases with dependencies: {len(sub_phases_with_dependencies)}')
-        print("--------------------------------")
+        logger.info(f'\tlength of incomplete sub phases without dependencies: {len(sub_phases_without_dependencies)}')
+        logger.info(f'\tlength of sub phases with dependencies: {len(sub_phases_with_dependencies)}')
+        logger.info("-" * 100)
 
-
+        # Analyse the sub phases without dependencies first
         for sub_phase in sub_phases_without_dependencies:
-            analysis_result = processor.analyze_phase(sub_phase.prompt)
-            if analysis_result:
-                print(f"Analysis result for {sub_phase.name}: {analysis_result[:100]}")
-
-                # delete all previous analysis results for this sub phase
+            try:
+                analysis_result = processor.analyze_phase(sub_phase.prompt)
+                if analysis_result:
+                    print(f"Analysis result for {sub_phase.name}: {analysis_result[:100]}")
+                    # AnalysisResult.objects.filter(sub_phase_id=sub_phase).delete()
+                    if not AnalysisResult.objects.filter(sub_phase_id=sub_phase).exists():
+                        AnalysisResult.objects.create(
+                            sub_phase_id=sub_phase,
+                            status='completed',
+                            result=analysis_result
+                        )
+                else:
+                    print(f"No analysis result for {sub_phase.name}")
+            except Exception as err:
+                logger.error(f"Error analysing phase {sub_phase.name}: {err}")
                 AnalysisResult.objects.filter(sub_phase_id=sub_phase).delete()
 
-                AnalysisResult.objects.create(
-                    sub_phase_id=sub_phase,
-                    status='completed',
-                    result=analysis_result
-                )
-            else:
-                print(f"No analysis result for {sub_phase.name}")
-                
+        # Analyse the sub phases with dependencies after
         for sub_phase in sub_phases_with_dependencies:
-            prompt = get_prompt_with_dependencies()
-            print(f"Prompt for {sub_phase.name}: {prompt}\n\n")
-            # delete all previous analysis results for this sub phase
-            AnalysisResult.objects.filter(sub_phase_id=sub_phase).delete()
-            analysis_result = processor.analyze_phase(prompt)
-            if analysis_result:
-                print(f"Analysis result for {sub_phase.name}: {analysis_result[:100]}")
-                AnalysisResult.objects.create(
-                    sub_phase_id=sub_phase,
-                    status='completed',
-                    result=analysis_result
-                )
-            else:
-                print(f"No analysis result for {sub_phase.name}")
-        
+            try:
+                prompt = get_prompt_with_dependencies(sub_phase.prompt, phase)
+                # AnalysisResult.objects.filter(sub_phase_id=sub_phase).delete()
+                if not AnalysisResult.objects.filter(sub_phase_id=sub_phase).exists():
+                    analysis_result = processor.analyze_phase(prompt)
+                    if analysis_result:
+                        print(f"Analysis result for {sub_phase.name}: {analysis_result[:100]}")
+                    AnalysisResult.objects.create(
+                        sub_phase_id=sub_phase,
+                        status='completed',
+                        result=analysis_result
+                    )
+                else:
+                    print(f"No analysis result for {sub_phase.name}")
+            except Exception as err:
+                logger.error(f"Error analysing phase {sub_phase.name}: {err}")
+                sub_phase.status = 'idle'
+                sub_phase.save()
+                AnalysisResult.objects.filter(sub_phase_id=sub_phase).delete()
+
+        # Set the phase to COMPLETED
+        phase.status = 'completed'
+        phase.save()
+
+        logger.info(f"\tPhase {phase.name} completed")
+
     except Exception as err:
         logger.error(f'analyse_phse(): {err}')
 
 @require_POST
 def start_analysis(request):
+    """
+    Starts the analysis of all phases
+    """
     try:
-        print(get_prompt_with_dependencies())
-        phase_ids = [phase.id for phase in Phase.objects.all()]
-        for id in phase_ids:
-            analyse_phase(id)
-        return JsonResponse({"message": phase_ids})
+        for phase in Phase.objects.all():
+            analyse_phase(phase)
+        return JsonResponse({"message": "Analysis started"})
     except Exception as e:
         logger.error(f"Error: {e}")
         return JsonResponse({"error": str(e)}, status=500)
@@ -114,6 +142,8 @@ def start_analysis(request):
 @require_GET
 def get_phases(request):
     try:
+        # print(f'session: {request.session.session_key}')
+
         data = {}
         phases = Phase.objects.all()
         for phase in phases:
