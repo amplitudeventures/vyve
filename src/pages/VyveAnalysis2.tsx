@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { ArrowLeft, RefreshCw, Settings, ChevronRight, Sparkles } from "lucide-react";
 import { Spinner } from "@/components/ui/spinner";
@@ -114,7 +114,7 @@ const VyveAnalysis = ({ error }) => {
     const subPhase = Object.values(phaseData)[currSub];
     return {
       "status": subPhase["status"],
-      "subPhaseName": subPhase["name"], 
+      "subPhaseName": subPhase["name"],
       "results": subPhase["analysis_results"]
     };
   }
@@ -122,6 +122,26 @@ const VyveAnalysis = ({ error }) => {
     const phaseData = Object.values(data)[currPhase];
     return phaseData["name"];
   }
+
+
+  useEffect(() => {
+    const fetchData = async () => {
+      const response = await fetch('http://127.0.0.1:8000/get_phases', {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! Status: ${response.status}`);
+      }
+      const data = await response.json();
+      console.log("These are the phases: ", data);
+    }
+    fetchData();
+  }, []);
+
 
   const renderPhaseContent = () => {
     return (
