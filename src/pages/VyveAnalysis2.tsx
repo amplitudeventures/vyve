@@ -110,7 +110,7 @@ const VyveAnalysis = ({ error }) => {
           description: PHASE_DESCRIPTIONS[currentPhase],
           status: phaseOrder[currentPhase]['status'],
           prompt: "Prompt",
-          result: phaseOrder[currentPhase]['analysis_results'],
+          result: phaseOrder[currentPhase]['analysis_result'],
         }}
         onStart={() => { }} />);
   }
