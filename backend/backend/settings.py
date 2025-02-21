@@ -22,17 +22,11 @@ environ.Env.read_env(os.path.join(os.path.dirname(__file__), '../.env'))  # Ensu
 # Use direct connection when running migrations
 # USE_DIRECT_DB = os.environ.get("USE_DIRECT_DB", "False").lower() == "true"
 
-
-
-# print(f'Database info: {env.db()}')
 load_dotenv()
 
 # 
 
 # db_cred = os.getenv("DATABASE_CRED")  
-
-
-# print(db_cred)
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent

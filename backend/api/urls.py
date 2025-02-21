@@ -9,4 +9,6 @@ urlpatterns = [
     path("get_analysis_results/", views.get_analysis_results, name="get_analysis_results"),
     path('get_phases/', views.get_phases, name="get_phases"),
     path('reset_analysis/', views.reset_analysis, name="reset_analysis"),
+    path('upload_file/', views.upload_file, name="upload_file"),
+    path('create_company/', views.create_company, name="create_company"),
 ]
