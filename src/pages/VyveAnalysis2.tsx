@@ -55,6 +55,7 @@ const VyveAnalysis = ({ error }) => {
     const temp = {};
     Object.entries(data.phases).forEach(([phaseName, phaseData]) => {
       Object.entries(phaseData.sub_phases).forEach(([subPhaseName, subPhaseData]) => {
+        subPhaseData['name'] = subPhaseName;
         temp[subPhaseData.phase_no] = subPhaseData;
       });
     });
@@ -67,10 +68,11 @@ const VyveAnalysis = ({ error }) => {
   }, [])
 
 
+  useEffect(()=>{
+    console.log('this is the response: ', allPhaseData);
+    console.log('this is the response: ', phaseOrder);
 
-
-
-
+  }, [allPhaseData])
 
 
   const renderPhaseContent = () => {
@@ -84,11 +86,11 @@ const VyveAnalysis = ({ error }) => {
       <ContentPhase
         phaseData={{
           phase: currentPhase,
-          displayName: Object.keys(phaseOrder[currentPhase])[0],
+          displayName: phaseOrder[currentPhase]['name'],
           description: PHASE_DESCRIPTIONS[currentPhase],
-          status: Object.values(phaseOrder[currentPhase])[0]['status'],
+          status: phaseOrder[currentPhase]['status'],
           prompt: "Prompt",
-          result: Object.values(phaseOrder[currentPhase])[0]['analysis_results'],
+          result: phaseOrder[currentPhase]['analysis_results'],
         }}
         onStart={() => { }} />);
   }
