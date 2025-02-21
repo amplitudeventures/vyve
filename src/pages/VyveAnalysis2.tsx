@@ -19,19 +19,6 @@ const VyveAnalysis = ({ error }) => {
 
   const navigate = useNavigate();
 
-  const getStatus = (currPhase, currSub) => {
-    const phaseData = Object.values(allPhaseData)[currPhase];
-    const subPhase = Object.values(phaseData)[currSub];
-    return {
-      "status": subPhase["status"],
-      "subPhaseName": subPhase["name"],
-      "results": subPhase["analysis_results"]
-    };
-  }
-  const getPhaseName = (currPhase, data) => {
-    const phaseData = Object.values(data)[currPhase];
-    return phaseData["name"];
-  }
   const fetchData = async () => {
     const response = await fetch('http://127.0.0.1:8000/get_phases', {
       method: 'GET',
@@ -56,6 +43,7 @@ const VyveAnalysis = ({ error }) => {
     Object.entries(data.phases).forEach(([phaseName, phaseData]) => {
       Object.entries(phaseData.sub_phases).forEach(([subPhaseName, subPhaseData]) => {
         subPhaseData['name'] = subPhaseName;
+        subPhaseData['phaseName'] = phaseName;
         temp[subPhaseData.phase_no] = subPhaseData;
       });
     });
@@ -63,12 +51,47 @@ const VyveAnalysis = ({ error }) => {
     setPhaseOrder(temp);
   }
 
+  const handleStartAnalysis = async (phaseName) => {
+    const temp = { ...phaseOrder };
+
+    for (let i = 1; i < 10; i++) {
+      console.log('hello');
+
+      for (const [phaseOrd, phaseData] of Object.entries(temp)) {
+        if (i === phaseData['order']) {
+          try {
+            const formData = new URLSearchParams();
+            formData.append('id', phaseData['id']);
+            const response = await fetch('http://127.0.0.1:8000/start_analysis/', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+              body: formData.toString(),
+            });
+
+            if (!response.ok) {
+              throw new Error('Error analyzing');
+            }
+
+            const data = await response.json();
+            console.log('this is the data: ', data);
+            temp[phaseOrd]['analysis_result'] = data['result'];
+
+          } catch (error) {
+            console.error(error.message);
+          }
+        }
+      }
+    }
+
+    setPhaseOrder(temp);
+  };
+
   useEffect(() => {
     fetchData();
   }, [])
 
 
-  useEffect(()=>{
+  useEffect(() => {
     console.log('this is the response: ', allPhaseData);
     console.log('this is the response: ', phaseOrder);
 
@@ -86,13 +109,14 @@ const VyveAnalysis = ({ error }) => {
       <ContentPhase
         phaseData={{
           phase: currentPhase,
+          phaseName: phaseOrder[currentPhase]['phaseName'],
           displayName: phaseOrder[currentPhase]['name'],
           description: PHASE_DESCRIPTIONS[currentPhase],
           status: phaseOrder[currentPhase]['status'],
           prompt: "Prompt",
           result: phaseOrder[currentPhase]['analysis_result'],
         }}
-        onStart={() => { }} />);
+        onStart={handleStartAnalysis} />);
   }
 
   const handlePhaseChange = (phase, subPhase) => {

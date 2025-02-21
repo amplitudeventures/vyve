@@ -8,6 +8,7 @@ import React, { useState } from 'react'
 
 interface PhaseData {
   phase: number;
+  phaseName: string;
   displayName: string;
   description: string;
   status: 'pending' | 'in_progress' | 'completed' | 'error';
@@ -43,12 +44,12 @@ function parsePrompt(promptText: string) {
 }
 interface ContentPhaseProps {
   phaseData: PhaseData;
-  onStart: (model: string) => void;
+  onStart: (phasename: string) => void;
 }
 function ContentPhase({ phaseData, onStart }: ContentPhaseProps) {
   console.log("phasedata: ", phaseData);
   const currentPhase = phaseData;
-  const { phase, displayName, description, status, result, prompt } = currentPhase;
+  const { phase, phaseName, displayName, description, status, result, prompt } = currentPhase;
   const [selectedModel, setSelectedModel] = useState('');
   const handleModelChange = () => { }
 
@@ -137,7 +138,7 @@ function ContentPhase({ phaseData, onStart }: ContentPhaseProps) {
             </Select>
             {(status != 'completed') && (
               <Button
-                onClick={() => onStart(selectedModel)}
+                onClick={() => onStart(phaseName)}
                 className="button-glow-subtle bg-gradient-to-r from-blue-500/90 via-purple-500/90 to-pink-500/90 hover:from-blue-600/90 hover:via-purple-600/90 hover:to-pink-600/90 text-white shadow-lg group"
               >
                 <PlayCircle className="h-4 w-4 mr-2 transition-transform group-hover:-translate-y-0.5" />
