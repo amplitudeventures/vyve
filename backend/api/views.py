@@ -10,6 +10,7 @@ from django.http import HttpResponse
 from .utils.pinecone_handler import PineconeHandler
 import logging
 from .utils.langchain_processor import LangChainProcessor
+import json
 logger = logging.getLogger(__name__)
 
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
@@ -149,10 +150,12 @@ def start_analysis(request):
     Starts the analysis of all phases
     """
 
-    if 'stopAnalysis' not in request.session:
-        request.session['stopAnalysis'] = False
-
     try:
+        if 'stopAnalysis' not in request.session:
+            request.session['stopAnalysis'] = False
+
+        data = request.POST.dict()
+
         for phase in Phase.objects.all():
             analyse_phase(phase, request)
         return JsonResponse({"message": "Analysis started"})
@@ -196,17 +199,16 @@ def get_phases(request):
                     }
             sub_phases = phase.subphase_set.all()
             
-            for sub_phase in sub_phases:
+            for i, sub_phase in enumerate(sub_phases):
                 analysis_inst = sub_phase.analysisresult_set.first()
                 result = analysis_inst.result if analysis_inst else ""
                 status = analysis_inst.status if analysis_inst else ""
                 print(f'{sub_phase.name}\' result: {analysis_inst.result[:10]}') if result else print(f"{sub_phase.name} has not results!!!")
                 sub_phase_info = {
-                    f"{sub_phase.name}":{
-                        "analysis_result": result,
-                        'status': status
-                        }
-                    }
+                    "analysis_result": result,
+                    'status': status,
+                    'order': i
+                }
                 phase_info['sub_phases'][sub_phase.name] = sub_phase_info
             data[f'{phase.name}'] = phase_info
         return JsonResponse({"phases": data})   
