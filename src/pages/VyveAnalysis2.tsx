@@ -4,113 +4,23 @@ import { ArrowLeft, RefreshCw, Settings, ChevronRight, Sparkles } from "lucide-r
 import { Spinner } from "@/components/ui/spinner";
 import { PhaseNavigation } from "@/components/analysis/PhaseNavigation";
 import ContentPhase from "@/components/analysis/phases/ContentPhase";
+import { PHASE_DESCRIPTIONS, PHASE_NAMES } from "@/config/PhaseConfig";
 
-// Dummy functions
 const handleRestart = () => console.log("Reset All Data clicked");
 
 
-const dummy = {
-  "phases": [
-    {
-      "name": "phase name 1",
-      "id": 1,
-      "subphases": {
-        "subphase1": {
-          "name": "sub phase name",
-          "analysis_result": "RESULT",
-          "status": "completed",
-          "id": 1
-        }, "subphase2": {
-          "name": "sub phase name",
-          "analysis_result": "",
-          "status": "pending",
-          "id": 2
-        }, "subphase3": {
-          "name": "sub phase name",
-          "analysis_result": "",
-          "status": "error",
-          "id": 3
-        }
-      },
-    },
-    {
-      "name": "phase name 2",
-      "id": 1,
-      "subphases": {
-        "subphase1": {
-          "name": "sub phase name",
-          "analysis_result": "RESULT",
-          "status": "completed",
-          "id": 1
-        },
-        "subphase2": {
-          "name": "sub phase name",
-          "analysis_result": "",
-          "status": "pending",
-          "id": 2
-        },
-        "subphase3": {
-          "name": "sub phase name",
-          "analysis_result": "",
-          "status": "error",
-          "id": 3
-        }
-      }
-    }
-  ],
-  "phase_prompts": [
-    {
-      "id": 1,
-      "name": "Identify Key Points",
-      "phase_index": 1,
-      "text": ` PHASE 0: DOCUMENT ANALYSIS
-OBJECTIVE:
-Establish an initial, comprehensive understanding of the company’s business context through a focused analysis of the provided documentation. This analysis should emphasize the company’s identity, operational scope, and sustainability (ESG) positioning, along with its industry categorization according to the NACE framework.
-REQUIRED INPUT:
-• Retrieve all available company documents from Pinecone relevant to the business context.
-• Include industry classification documents: Industry Categorization.md (defines the primary NACE category or categories) and Industry Categorization Level 2.md (specifies subcategories relevant to the company).
-• Understand your personality and purpose through the AI Identity provided in your context, and strictly adhere to this personality.
-TASKS:
-1. Retrieve and review the provided company documents.
-2. Examine industry classification details to determine the applicable NACE category (or categories) and any relevant subcategories.
-3. Develop a comprehensive understanding of the company’s identity—covering who the company is, what it does, why it exists, and when key milestones occur.
-OUTPUT FORMAT:
-• Key Findings: Summarize the central insights obtained from the documentation.
-• Detailed Analysis: Provide a concise, approximately 300-word summary that also defines the NACE categorization.`
-    },
-    {
-      "id": 2,
-      "name": "Extract Sentiments",
-      "phase_index": 1,
-      "text": "Analyze the sentiment in the document."
-    }
-  ],
-  "analysis_results": [
-    {
-      "id": 1,
-      "sub_phase_id": 1,
-      "result": "The document contains five key points.",
-      "status": "Completed",
-      "error": "",
-      "created_at": "2025-02-17T12:00:00Z",
-      "updated_at": "2025-02-17T12:30:00Z"
-    },
-    {
-      "id": 2,
-      "sub_phase_id": 2,
-      "result": "The sentiment analysis detected a neutral tone.",
-      "status": "Completed",
-      "error": "",
-      "created_at": "2025-02-17T12:15:00Z",
-      "updated_at": "2025-02-17T12:45:00Z"
-    }
-  ]
-}
 
 const VyveAnalysis = ({ error }) => {
+  const [currentPhase, setCurrentPhase] = useState(0);
+  const [allPhaseData, setAllPhaseData] = useState(null);
+  const [phaseOrder, setPhaseOrder] = useState(null);
+  const [currentSubPhase, setCurrentSubPhase] = useState(0);
+  const [isLoading, setIsLoding] = useState(false);
 
-  const getStatus = (currPhase, data, currSub) => {
-    const phaseData = Object.values(data)[currPhase];
+  const navigate = useNavigate();
+
+  const getStatus = (currPhase, currSub) => {
+    const phaseData = Object.values(allPhaseData)[currPhase];
     const subPhase = Object.values(phaseData)[currSub];
     return {
       "status": subPhase["status"],
@@ -122,6 +32,48 @@ const VyveAnalysis = ({ error }) => {
     const phaseData = Object.values(data)[currPhase];
     return phaseData["name"];
   }
+  const fetchData = async () => {
+    const response = await fetch('http://127.0.0.1:8000/get_phases', {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! Status: ${response.status}`);
+    }
+
+    const data = await response.json();
+    Object.entries(data.phases).forEach(([phaseName, phaseData]) => {
+      let counter = 0;
+      Object.entries(phaseData.sub_phases).forEach(([subPhaseName, subPhaseData]) => {
+        subPhaseData.phase_no = counter;
+        counter += 1;
+      });
+    });
+    const temp = {};
+    Object.entries(data.phases).forEach(([phaseName, phaseData]) => {
+      Object.entries(phaseData.sub_phases).forEach(([subPhaseName, subPhaseData]) => {
+        subPhaseData['name'] = subPhaseName;
+        temp[subPhaseData.phase_no] = subPhaseData;
+      });
+    });
+    setAllPhaseData(data["phases"]);
+    setPhaseOrder(temp);
+  }
+
+  useEffect(() => {
+    fetchData();
+  }, [])
+
+
+  useEffect(()=>{
+    console.log('this is the response: ', allPhaseData);
+    console.log('this is the response: ', phaseOrder);
+
+  }, [allPhaseData])
+
 
 
   useEffect(() => {
@@ -144,25 +96,24 @@ const VyveAnalysis = ({ error }) => {
 
 
   const renderPhaseContent = () => {
+    if (!phaseOrder) {
+      return (
+        <div className="flex items-center justify-center h-64">
+          <Spinner />
+        </div>)
+    }
     return (
       <ContentPhase
         phaseData={{
           phase: currentPhase,
-          subphase: currentSubPhase,
-          displayName: dummy["phases"][currentPhase]["name"],
-          description: "description",
-          status: Object.values(dummy["phases"][currentPhase]["subphases"])[currentSubPhase]["status"]
-          ,
+          displayName: phaseOrder[currentPhase]['name'],
+          description: PHASE_DESCRIPTIONS[currentPhase],
+          status: phaseOrder[currentPhase]['status'],
           prompt: "Prompt",
-          result: Object.values(dummy["phases"][currentPhase]["subphases"])[currentSubPhase]["analysis_result"]
+          result: phaseOrder[currentPhase]['analysis_results'],
         }}
         onStart={() => { }} />);
   }
-  const [currentPhase, setCurrentPhase] = useState(0);
-  const [currentSubPhase, setCurrentSubPhase] = useState(0);
-  const [isLoading, setIsLoding] = useState(false);
-
-  const navigate = useNavigate();
 
   const handlePhaseChange = (phase, subPhase) => {
     console.log("Phase changed to", phase, subPhase)
