@@ -135,7 +135,7 @@ function ContentPhase({ phaseData, onStart }: ContentPhaseProps) {
                 <SelectItem value="o3-mini">o3-Mini</SelectItem>
               </SelectContent>
             </Select>
-            {(status) && (
+            {(true) && (
               <Button
                 onClick={() => onStart(selectedModel)}
                 className="button-glow-subtle bg-gradient-to-r from-blue-500/90 via-purple-500/90 to-pink-500/90 hover:from-blue-600/90 hover:via-purple-600/90 hover:to-pink-600/90 text-white shadow-lg group"
