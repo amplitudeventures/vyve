@@ -20,7 +20,7 @@ class Phase(models.Model):
 class SubPhase(models.Model):
     name = models.CharField(max_length=255)
     # description = models.TextField()
-    parent_phase_id = models.ForeignKey(Phase, on_delete=models.CASCADE, null=True, blank=True)
+    parent_phase_id = models.ForeignKey(Phase, on_delete=models.CASCADE, default=None)
     # prompt_id = models.ForeignKey(Prompt, on_delete=models.CASCADE)
     takesSummaries = models.BooleanField(default=True)
     prompt = models.TextField()
@@ -28,7 +28,15 @@ class SubPhase(models.Model):
     def __str__(self):
         return self.name
 
+
+class CompanyProfile(models.Model):
+    company_name = models.CharField(max_length=255)
+    def __str__(self):
+        return self.company_name
+
+
 class AnalysisResult(models.Model):
+    company_profile = models.ForeignKey(CompanyProfile, on_delete=models.CASCADE)
     sub_phase_id = models.ForeignKey(SubPhase, on_delete=models.CASCADE)
     result = models.TextField()
     status = models.CharField(max_length=255)
@@ -39,11 +47,6 @@ class AnalysisResult(models.Model):
     def __str__(self):
         return self.sub_phase_id.name
 
-
-class CompanyProfile(models.Model):
-    company_name = models.CharField(max_length=255)
-    def __str__(self):
-        return self.company_name
 
 class CompanyDocument(models.Model):
     company_profile = models.ForeignKey(CompanyProfile, on_delete=models.CASCADE)

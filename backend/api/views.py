@@ -12,6 +12,7 @@ from .utils.langchain_processor import LangChainProcessor
 import json
 from supabase import create_client
 from .models import CompanyProfile, CompanyDocument
+import uuid
 
 logger = logging.getLogger(__name__)
 
@@ -78,7 +79,7 @@ def analyse_phase(sub_phase_id, request):
             # latest_result = AnalysisResult.objects.filter(sub_phase_id=sub_phase).order_by('-created_at').first()
             
             # TEMPORARY: REMEMBER TO REMOVE THIS
-            AnalysisResult.objects.filter(sub_phase_id=sub_phase).delete()
+            # AnalysisResult.objects.filter(sub_phase_id=sub_phase).delete()
             takesSummaries = sub_phase.takesSummaries
             latest_result = None
             if not latest_result and not takesSummaries:
@@ -90,6 +91,10 @@ def analyse_phase(sub_phase_id, request):
         # logger.info("-" * 100)
 
         phase_status = 'completed'
+
+        temp_company_profile = CompanyProfile.objects.first()
+
+
         # Analyse the sub phases without dependencies first
         for sub_phase in sub_phases_without_dependencies:
             try:
@@ -102,13 +107,17 @@ def analyse_phase(sub_phase_id, request):
                 analysis_result = processor.analyze_phase(sub_phase.prompt)
                 if analysis_result:
                     print(f"Analysis result for {sub_phase.name}: {analysis_result[:100]}")
-                    # AnalysisResult.objects.filter(sub_phase_id=sub_phase).delete()
-                    if not AnalysisResult.objects.filter(sub_phase_id=sub_phase).exists():
-                        AnalysisResult.objects.create(
-                            sub_phase_id=sub_phase,
-                            status='completed',
-                            result=analysis_result
-                        )
+
+                    # Delete the existing analysis result
+                    AnalysisResult.objects.filter(sub_phase_id=sub_phase).delete()
+
+                    # Create a new analysis result
+                    AnalysisResult.objects.create(
+                        sub_phase_id=sub_phase,
+                        company_profile=temp_company_profile,
+                        status='completed',
+                        result=analysis_result
+                    )
                 else:
                     print(f"No analysis result for {sub_phase.name}")
             except Exception as err:
@@ -120,6 +129,7 @@ def analyse_phase(sub_phase_id, request):
         if analysis_result:
             AnalysisResult.objects.create(
                 sub_phase_id=sub_phase,
+                company_profile=temp_company_profile,
                 status='completed',
                 result=analysis_result
             )
@@ -142,10 +152,16 @@ def start_analysis(request):
 
         data = request.POST.dict()
         sub_phase_id = data.get('id', None)
+        company_id = data.get('company_id', None)
         if not sub_phase_id:
             return JsonResponse({"error": "Sub phase ID is required"}, status=400)
         
-
+        # if not company_id or not CompanyProfile.objects.filter(id=company_id).exists():
+        #     return JsonResponse({"error": "Company does not exist"}, status=400)
+        
+        # Pass this to the analyse_phase function so the results can be associated with the company, next up
+        # company_profile = CompanyProfile.objects.get(id=company_id)
+        
         # for phase in Phase.objects.all():
         result = analyse_phase(sub_phase_id, request)
         return JsonResponse({"result": result})
@@ -191,7 +207,7 @@ def get_phases(request):
                 analysis_inst = sub_phase.analysisresult_set.first()
                 result = analysis_inst.result if analysis_inst else ""
                 status = analysis_inst.status if analysis_inst else ""
-                print(f'{sub_phase.name}\' result: {analysis_inst.result[:10]}') if result else print(f"{sub_phase.name} has not results!!!")
+                print(f'{sub_phase.name}\' result: {analysis_inst.result[:10]}') if result else print(f"{sub_phase.name} has no results!!!")
                 sub_phase_info = {
                     "analysis_result": result,
                     'status': status,
@@ -234,8 +250,7 @@ def upload_file(request):
         # Read the file content
         file_content = uploaded_file.read()
         logger.info(f"\t\tFile name: {file_name}, content size: {len(file_content)}")
-        upload_file = supabase_client.storage.from_("documents").upload(file_name, file_content)
-        
+        upload_file = supabase_client.storage.from_("documents").upload(f"{uuid.uuid4()}_{file_name}", file_content)
         doc_path = upload_file.path
         
         CompanyDocument.objects.create(company_profile=company_profile, file_path=doc_path)
