@@ -15,7 +15,7 @@ const VyveAnalysis = ({ error }) => {
   const [allPhaseData, setAllPhaseData] = useState(null);
   const [phaseOrder, setPhaseOrder] = useState(null);
   const [currentSubPhase, setCurrentSubPhase] = useState(0);
-  const [isLoading, setIsLoding] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
 
   const navigate = useNavigate();
 
@@ -52,9 +52,16 @@ const VyveAnalysis = ({ error }) => {
   }
 
   const handleStartAnalysis = async (phaseName) => {
+    setIsLoading(true);
+    let maxIndex = 1;
+    for (const [subPhaseName, phaseData] of Object.entries(allPhaseData[phaseName]['sub_phases'])) {
+      maxIndex = Math.max(phaseData['order'], maxIndex);
+    }
     const temp = { ...phaseOrder };
 
-    for (let i = 1; i < 10; i++) {
+    console.log('this is max index: ', maxIndex);
+
+    for (let i = 1; i <= maxIndex; i++) {
       console.log('hello');
 
       for (const [phaseOrd, phaseData] of Object.entries(temp)) {
@@ -75,6 +82,8 @@ const VyveAnalysis = ({ error }) => {
             const data = await response.json();
             console.log('this is the data: ', data);
             temp[phaseOrd]['analysis_result'] = data['result'];
+            temp[phaseOrd]['status'] = 'completed';
+            setIsLoading(false);
 
           } catch (error) {
             console.error(error.message);
@@ -83,11 +92,14 @@ const VyveAnalysis = ({ error }) => {
       }
     }
 
+    console.log('this is temp: ', temp);
+
     setPhaseOrder(temp);
   };
 
   useEffect(() => {
     fetchData();
+
   }, [])
 
 
@@ -135,6 +147,7 @@ const VyveAnalysis = ({ error }) => {
           status: phaseOrder[currentPhase]['status'],
           prompt: "Prompt",
           result: phaseOrder[currentPhase]['analysis_result'],
+          onLoading: isLoading,
         }}
         onStart={handleStartAnalysis} />);
   }
@@ -209,15 +222,7 @@ const VyveAnalysis = ({ error }) => {
                 currentSubPhase={currentSubPhase}
                 onPhaseChange={handlePhaseChange}
               />
-              {isLoading ? (
-                <div className="flex items-center justify-center h-64">
-                  <Spinner />
-                </div>
-              ) : error ? (
-                <div className="text-red-500 text-center mt-8">{error}</div>
-              ) : (
-                <div className="mt-8">{renderPhaseContent()}</div>
-              )}
+              <div className="mt-8">{renderPhaseContent()}</div>
             </div>
           </div>
         </div>
