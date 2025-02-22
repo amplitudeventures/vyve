@@ -11,4 +11,5 @@ urlpatterns = [
     path('reset_analysis/', views.reset_analysis, name="reset_analysis"),
     path('upload_file/', views.upload_file, name="upload_file"),
     path('create_company/', views.create_company, name="create_company"),
+    path('get_company_profiles/', views.get_company_profiles, name="get_company_profiles"),
 ]

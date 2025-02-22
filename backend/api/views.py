@@ -13,7 +13,7 @@ import json
 from supabase import create_client
 from .models import CompanyProfile, CompanyDocument
 import uuid
-
+from .serializers import CompanyProfileSerializer
 logger = logging.getLogger(__name__)
 
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
@@ -69,17 +69,12 @@ def analyse_phase(sub_phase_id, request):
         if result:
             return result.result
         phase = sub_phase.parent_phase_id
-        # where order is less than or equal to the sub phase's order
+        # where order is less than or equal to the current sub phase's order
         previous_phases = Phase.objects.filter(order__lte=sub_phase.parent_phase_id.order)
         sub_phases = SubPhase.objects.filter(parent_phase_id__in=previous_phases)
     
         sub_phases_without_dependencies = []
-        # sub_phases_with_dependencies = []
         for sub_phase in sub_phases:
-            # latest_result = AnalysisResult.objects.filter(sub_phase_id=sub_phase).order_by('-created_at').first()
-            
-            # TEMPORARY: REMEMBER TO REMOVE THIS
-            # AnalysisResult.objects.filter(sub_phase_id=sub_phase).delete()
             takesSummaries = sub_phase.takesSummaries
             latest_result = None
             if not latest_result and not takesSummaries:
@@ -87,12 +82,9 @@ def analyse_phase(sub_phase_id, request):
             # elif not latest_result and takesSummaries:
             #     sub_phases_with_dependencies.append(sub_phase)
         logger.info(f'\tlength of incomplete sub phases without dependencies: {len(sub_phases_without_dependencies)}')
-        # logger.info(f'\tlength of sub phases with dependencies: {len(sub_phases_with_dependencies)}')
-        # logger.info("-" * 100)
 
-        phase_status = 'completed'
-
-        temp_company_profile = CompanyProfile.objects.first()
+        # Later replace this with the company profile that is passed in the request | IMPORTANT
+        company_profile = CompanyProfile.objects.first()
 
 
         # Analyse the sub phases without dependencies first
@@ -108,13 +100,13 @@ def analyse_phase(sub_phase_id, request):
                 if analysis_result:
                     print(f"Analysis result for {sub_phase.name}: {analysis_result[:100]}")
 
-                    # Delete the existing analysis result
-                    AnalysisResult.objects.filter(sub_phase_id=sub_phase).delete()
+                    # Delete the existing analysis result that belongs to the company profile
+                    company_profile.analysisresult_set.filter(sub_phase_id=sub_phase).delete()
 
                     # Create a new analysis result
                     AnalysisResult.objects.create(
                         sub_phase_id=sub_phase,
-                        company_profile=temp_company_profile,
+                        company_profile=company_profile,
                         status='completed',
                         result=analysis_result
                     )
@@ -127,17 +119,15 @@ def analyse_phase(sub_phase_id, request):
         prompt = get_prompt_with_dependencies(sub_phase.prompt, phase)
         analysis_result = processor.analyze_phase(prompt)
         if analysis_result:
+            # Delete the existing analysis result that belongs to the company profile
+            company_profile.analysisresult_set.filter(sub_phase_id=sub_phase).delete()
             AnalysisResult.objects.create(
                 sub_phase_id=sub_phase,
-                company_profile=temp_company_profile,
+                company_profile=company_profile,
                 status='completed',
                 result=analysis_result
             )
         return analysis_result
-        # Set the phase to COMPLETED
-        # phase.status = phase_status
-        # phase.save()
-
     except Exception as err:
         logger.error(f'analyse_phse(): {err}')
 
@@ -236,6 +226,16 @@ def create_company(request):
         logger.error(err)
         return JsonResponse({"error": f"/create_company : {err}"}, status=500)
     
+@csrf_exempt
+def get_company_profiles(request):
+    try:
+        company_profiles = CompanyProfile.objects.all()
+        serializer = CompanyProfileSerializer(company_profiles, many=True)
+        return JsonResponse({"company_profiles": serializer.data})
+    except Exception as err:
+        logger.error(err)
+        return JsonResponse({"error": f"/get_company_profiles : {err}"}, status=500)
+
 @csrf_exempt
 def upload_file(request):
     try:
