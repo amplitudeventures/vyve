@@ -1,8 +1,7 @@
-from django.shortcuts import render
 from django.http import JsonResponse
-from django.views.decorators.http import require_GET, require_http_methods, require_POST
-from django.views.decorators.http import require_GET
-# from django.views.decorators.csrf import csrf_exempt
+# from django.views.decorators.http import require_GET, require_http_methods, require_POST
+# from django.views.decorators.http import require_GET
+from django.views.decorators.csrf import csrf_exempt
 from .models import Phase, SubPhase, AnalysisResult
 import os
 # Create your views here.
@@ -11,6 +10,9 @@ from .utils.pinecone_handler import PineconeHandler
 import logging
 from .utils.langchain_processor import LangChainProcessor
 import json
+from supabase import create_client
+from .models import CompanyProfile, CompanyDocument
+
 logger = logging.getLogger(__name__)
 
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
@@ -18,8 +20,12 @@ PINECONE_API_KEY = os.getenv("PINECONE_API_KEY")
 PINECONE_ENVIRONMENT = os.getenv("PINECONE_ENVIRONMENT")
 PINECONE_INDEX_NAME = os.getenv("PINECONE_INDEX_NAME")
 
-pinecone_handler = PineconeHandler(PINECONE_INDEX_NAME, PINECONE_API_KEY, PINECONE_ENVIRONMENT, OPENAI_API_KEY)
-processor = LangChainProcessor(pinecone_handler)
+try:
+    pinecone_handler = PineconeHandler(PINECONE_INDEX_NAME, PINECONE_API_KEY, PINECONE_ENVIRONMENT, OPENAI_API_KEY)
+    processor = LangChainProcessor(pinecone_handler)
+    supabase_client = create_client(os.getenv("SUPABASE_URL"), os.getenv("SUPABASE_SERVICE_ROLE_KEY"))
+except Exception as err:
+    raise Exception(f"Error: {err}")
 
 def get_prompt_with_dependencies(current_phase_prompt: str, phase: Phase):
     completed_results = AnalysisResult.objects.filter(status='completed')
@@ -50,7 +56,6 @@ def reset_phases():
     
     AnalysisResult.objects.all().delete()
 
-
 status = ['idle', 'in_progress', 'completed', 'incomplete']
 
 def analyse_phase(sub_phase_id, request):
@@ -63,9 +68,6 @@ def analyse_phase(sub_phase_id, request):
         if result:
             return result.result
         phase = sub_phase.parent_phase_id
-        # Set the phase to in IN_PROGRESS
-        # phase.status = 'in_progress'
-        # phase.save()
         # where order is less than or equal to the sub phase's order
         previous_phases = Phase.objects.filter(order__lte=sub_phase.parent_phase_id.order)
         sub_phases = SubPhase.objects.filter(parent_phase_id__in=previous_phases)
@@ -113,32 +115,6 @@ def analyse_phase(sub_phase_id, request):
                 logger.error(f"Error analysing phase {sub_phase.name}: {err}")
                 AnalysisResult.objects.filter(sub_phase_id=sub_phase).delete()
 
-        # Analyse the sub phases with dependencies after
-        # for sub_phase in sub_phases_with_dependencies:
-        #     try:
-        #         if request.session['stopAnalysis']:
-        #             logger.info(f"\t\tStopping analysis for {sub_phase.name}")
-        #             phase_status = 'incomplete'
-        #             break
-        #         prompt = get_prompt_with_dependencies(sub_phase.prompt, phase)
-        #         # AnalysisResult.objects.filter(sub_phase_id=sub_phase).delete()
-        #         if not AnalysisResult.objects.filter(sub_phase_id=sub_phase).exists():
-        #             analysis_result = processor.analyze_phase(prompt)
-        #             if analysis_result:
-        #                 print(f"Analysis result for {sub_phase.name}: {analysis_result[:100]}")
-        #             AnalysisResult.objects.create(
-        #                 sub_phase_id=sub_phase,
-        #                 status='completed',
-        #                 result=analysis_result
-        #             )
-        #         else:
-        #             print(f"No analysis result for {sub_phase.name}")
-        #     except Exception as err:
-        #         logger.error(f"Error analysing phase {sub_phase.name}: {err}")
-        #         sub_phase.status = 'idle'
-        #         sub_phase.save()
-        #         AnalysisResult.objects.filter(sub_phase_id=sub_phase).delete()
-
         prompt = get_prompt_with_dependencies(sub_phase.prompt, phase)
         analysis_result = processor.analyze_phase(prompt)
         if analysis_result:
@@ -152,12 +128,9 @@ def analyse_phase(sub_phase_id, request):
         # phase.status = phase_status
         # phase.save()
 
-        # logger.info(f"\tPhase {phase.name} completed")
-
     except Exception as err:
         logger.error(f'analyse_phse(): {err}')
 
-# @require_GET
 def start_analysis(request):
     """
     Starts the analysis of all phases
@@ -180,7 +153,6 @@ def start_analysis(request):
         logger.error(f"Error: {e}")
         return JsonResponse({"error": str(e)}, status=500)
 
-# @require_GET
 def stop_analysis(request):
     """
     Stops the analysis of all phases
@@ -203,7 +175,6 @@ def reset_analysis(request):
         logger.error(f"Error: {e}")
         return JsonResponse({"error": str(e)}, status=500)
 
-# @require_GET
 def get_phases(request):
     try:
         # print(f'session: {request.session.session_key}')
@@ -234,7 +205,47 @@ def get_phases(request):
         logger.error(err)
         JsonResponse({"error": f"/get_phases : {err}"})
 
-# @require_GET
+
+@csrf_exempt
+def create_company(request):
+    try:
+        company_name = request.POST.get("company_name")
+
+        if CompanyProfile.objects.filter(company_name=company_name).exists():
+            return JsonResponse({"error": "Company already exists"}, status=400)
+        
+        CompanyProfile.objects.create(company_name=company_name)
+        return JsonResponse({"message": "Company created successfully"})
+    except Exception as err:
+        logger.error(err)
+        return JsonResponse({"error": f"/create_company : {err}"}, status=500)
+    
+@csrf_exempt
+def upload_file(request):
+    try:
+        uploaded_file = request.FILES["file"]
+        file_name = uploaded_file.name
+        company_id = request.POST.get("company_id")
+        if not CompanyProfile.objects.filter(id=company_id).exists():
+            return JsonResponse({"error": "Company does not exist"}, status=400)
+        
+        company_profile = CompanyProfile.objects.get(id=company_id)
+        
+        # Read the file content
+        file_content = uploaded_file.read()
+        logger.info(f"\t\tFile name: {file_name}, content size: {len(file_content)}")
+        upload_file = supabase_client.storage.from_("documents").upload(file_name, file_content)
+        
+        doc_path = upload_file.path
+        
+        CompanyDocument.objects.create(company_profile=company_profile, file_path=doc_path)
+        return JsonResponse({"message": "File uploaded successfully"})
+
+    except Exception as err:
+        logger.error(err)
+        return JsonResponse({"error": f"/create_user : {err}"}, status=500)
+
+
 def get_analysis_status(request):
     # return JsonResponse({"message": "Analysis status"})
     
