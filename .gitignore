@@ -18,7 +18,7 @@ my_token.txt
 env/
 
 embed.py
-document_utils.py
+/document_utils.py
 /langchain_processor.py
 /pinecone_handler.py
 /process_documents.py

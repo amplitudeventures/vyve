@@ -36,7 +36,7 @@ class CompanyProfile(models.Model):
 
 
 class AnalysisResult(models.Model):
-    company_profile = models.ForeignKey(CompanyProfile, on_delete=models.CASCADE)
+    company_profile = models.ForeignKey(CompanyProfile, on_delete=models.CASCADE, default=None)
     sub_phase_id = models.ForeignKey(SubPhase, on_delete=models.CASCADE)
     result = models.TextField()
     status = models.CharField(max_length=255)

@@ -28,6 +28,9 @@ try:
 except Exception as err:
     raise Exception(f"Error: {err}")
 
+status = ['idle', 'in_progress', 'completed', 'incomplete']
+
+
 def get_prompt_with_dependencies(current_phase_prompt: str, phase: Phase):
     completed_results = AnalysisResult.objects.filter(status='completed')
     # Make sure we only include the completed sub phases that are before the current phase
@@ -46,18 +49,12 @@ def get_prompt_with_dependencies(current_phase_prompt: str, phase: Phase):
     logger.info(f"Prompt with dependencies: \n\n{prompt}\n\n")
     return prompt
 
-def reset_phases():
+def reset_phases(company_profile):
     """
     Resets the status of all phases to idle and deletes all analysis results
     """
-    phases = Phase.objects.all()
-    for phase in phases:
-        phase.status = 'idle'
-        phase.save()
-    
-    AnalysisResult.objects.all().delete()
-
-status = ['idle', 'in_progress', 'completed', 'incomplete']
+    analysis_results = company_profile.analysisresult_set.all() 
+    analysis_results.delete()
 
 def analyse_phase(sub_phase_id, request):
     """
@@ -131,6 +128,28 @@ def analyse_phase(sub_phase_id, request):
     except Exception as err:
         logger.error(f'analyse_phse(): {err}')
 
+@csrf_exempt
+def process_documents(request):
+    """
+    Processes the documents of a company
+    """
+    try:
+        company_id = request.POST.get('company_id', None)
+        if not company_id or not CompanyProfile.objects.filter(id=company_id).exists():
+            return JsonResponse({"error": "Company ID is required"}, status=400)
+        
+        company_profile = CompanyProfile.objects.get(id=company_id)
+
+        selected_documents_ids = request.POST.get('documents_ids', None)
+        documents = CompanyDocument.objects.filter(id__in=selected_documents_ids)
+        file_names = [document.file_path for document in documents]
+        pinecone_handler.upsert_documents(file_names, company_profile.company_name)
+
+        return JsonResponse({"message": "Documents processed successfully"})
+    except Exception as err:
+        logger.error(f'process_documents(): {err}')
+        return JsonResponse({"error": str(err)}, status=500)
+
 def start_analysis(request):
     """
     Starts the analysis of all phases
@@ -175,7 +194,15 @@ def reset_analysis(request):
     Resets the analysis of all phases
     """
     try:
-        reset_phases()
+        id = request.POST.get('id', None)
+        
+        # TEMPORARY: REMEMBER TO REMOVE THIS
+        # if not id:
+        #     return JsonResponse({"error": "ID is required"}, status=400)
+        
+        # company_profile = CompanyProfile.objects.get(id=id)
+        company_profile = CompanyProfile.objects.first()
+        reset_phases(company_profile)
         return JsonResponse({"message": "Analysis reset"})
     except Exception as e:
         logger.error(f"Error: {e}")
@@ -183,9 +210,15 @@ def reset_analysis(request):
 
 def get_phases(request):
     try:
-        # print(f'session: {request.session.session_key}')
-
         data = {}
+        company_id = request.POST.get('company_id', None)
+        
+        # TEMPORARY: REMEMBER TO REMOVE THIS
+        # if not company_id:
+        #     return JsonResponse({"error": "Company ID is required"}, status=400)
+        
+        # company_profile = CompanyProfile.objects.get(id=company_id)
+        company_profile = CompanyProfile.objects.first()
         phases = Phase.objects.all()
         for phase in phases:
             phase_info = {
@@ -194,7 +227,9 @@ def get_phases(request):
             sub_phases = phase.subphase_set.all()
             
             for i, sub_phase in enumerate(sub_phases):
-                analysis_inst = sub_phase.analysisresult_set.first()
+                # Later change it to the company profile that is passed in the request | IMPORTANT
+                analysis_inst = sub_phase.analysisresult_set.filter(company_profile=company_profile).first()
+                
                 result = analysis_inst.result if analysis_inst else ""
                 status = analysis_inst.status if analysis_inst else ""
                 print(f'{sub_phase.name}\' result: {analysis_inst.result[:10]}') if result else print(f"{sub_phase.name} has no results!!!")
@@ -210,7 +245,6 @@ def get_phases(request):
     except Exception as err:
         logger.error(err)
         JsonResponse({"error": f"/get_phases : {err}"})
-
 
 @csrf_exempt
 def create_company(request):
@@ -259,7 +293,6 @@ def upload_file(request):
     except Exception as err:
         logger.error(err)
         return JsonResponse({"error": f"/create_user : {err}"}, status=500)
-
 
 def get_analysis_status(request):
     # return JsonResponse({"message": "Analysis status"})
@@ -374,7 +407,6 @@ def get_analysis_status(request):
         
 async def get_analysis_status(request):
     return JsonResponse({"message": "Analysis status"})
-
 
 async def get_analysis_results(request):
     return JsonResponse({"message": "Analysis results"})

@@ -94,6 +94,10 @@ class PineconeHandler:
             # Clean up old documents
             if self.namespace_exists(namespace):
                 self.delete_namespace(namespace)
+            
+            if not namespace:
+                namespace = None
+                
             logger.info(f"Upserting documents for namespace: {namespace}")
 
             # Process documents
@@ -141,7 +145,7 @@ class PineconeHandler:
                         asyncio.to_thread(
                             self.index.upsert,
                             vectors=batch,
-                            # namespace=namespace,
+                            namespace=namespace,
                             show_progress=True
                         ),
                         timeout=60
