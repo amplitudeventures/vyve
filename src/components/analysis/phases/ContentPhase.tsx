@@ -3,6 +3,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Spinner } from '@/components/ui/spinner';
 import { FileText, PlayCircle, RefreshCw, Sparkles } from 'lucide-react';
 import React, { useState } from 'react'
 
@@ -14,6 +15,7 @@ interface PhaseData {
   status: 'pending' | 'in_progress' | 'completed' | 'error';
   result?: any;
   prompt?: string;
+  onLoading: boolean;
 }
 
 function parsePrompt(promptText: string) {
@@ -49,7 +51,7 @@ interface ContentPhaseProps {
 function ContentPhase({ phaseData, onStart }: ContentPhaseProps) {
   console.log("phasedata: ", phaseData);
   const currentPhase = phaseData;
-  const { phase, phaseName, displayName, description, status, result, prompt } = currentPhase;
+  const { phase, phaseName, displayName, description, status, result, prompt, onLoading } = currentPhase;
   const [selectedModel, setSelectedModel] = useState('');
   const handleModelChange = () => { }
 
@@ -140,9 +142,17 @@ function ContentPhase({ phaseData, onStart }: ContentPhaseProps) {
               <Button
                 onClick={() => onStart(phaseName)}
                 className="button-glow-subtle bg-gradient-to-r from-blue-500/90 via-purple-500/90 to-pink-500/90 hover:from-blue-600/90 hover:via-purple-600/90 hover:to-pink-600/90 text-white shadow-lg group"
+                disabled={onLoading}
               >
-                <PlayCircle className="h-4 w-4 mr-2 transition-transform group-hover:-translate-y-0.5" />
-                Start Analysis
+                {onLoading ? (
+                  'Processing'
+                ) : (
+                  <>
+                    <PlayCircle
+                      className="h-4 w-4 mr-2 transition-transform group-hover:-translate-y-0.5"
+                    />
+                    Start Analysis
+                  </>)}
               </Button>
             )}
           </div>
@@ -162,7 +172,7 @@ function ContentPhase({ phaseData, onStart }: ContentPhaseProps) {
           )}
           {renderPromptContent()}
 
-          {status === 'completed' && result && (
+          {true && result && (
             <div className="space-y-6">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
@@ -175,7 +185,7 @@ function ContentPhase({ phaseData, onStart }: ContentPhaseProps) {
                 </div>
                 <div className="flex items-center gap-4">
                   <Button
-                    onClick={() => onStart(selectedModel)}
+                    onClick={() => onStart(phaseName)}
                     className="button-glow-subtle bg-gradient-to-r from-blue-500/80 via-purple-500/80 to-pink-500/80 hover:from-blue-600/80 hover:via-purple-600/80 hover:to-pink-600/80 text-white shadow-lg group"
                   >
                     <RefreshCw className="h-4 w-4 mr-2 transition-transform group-hover:rotate-180" />
@@ -197,7 +207,7 @@ function ContentPhase({ phaseData, onStart }: ContentPhaseProps) {
             </div>
           )}
         </CardContent>
-      </Card>
+      </Card >
     )
   )
 }
